@@ -18,7 +18,12 @@ class GestorColas:
     # TO DO: Implementar método para agregar proceso a cola de nuevos
     # - Ordenar por tiempo de arribo 
     def agregar_nuevo(self, proceso: Proceso):
-        pass
+        '''
+            Agrega y ordena la lista de mayor a menor tiempo de irrupción
+        '''
+        self.nuevos.append(proceso)
+        self.nuevos.sort(key=lambda proceso: proceso.tiempo_irrupcion, reverse=True)
+
     
     # TO DO: Implementar método para mover proceso de nuevos a listos
     def nuevo_a_listo(self, proceso: Proceso):
