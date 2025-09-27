@@ -1,7 +1,8 @@
 # Clase base para arrancar, si necesitas agregar mas cosas hacelo
 
 from .proceso import Proceso
-from gestor_memoria import GestorMemoria
+from core.gestor_memoriaBestFit import GestorMemoria
+
 class GestorColas:
     def __init__(self):
         # TO DO: Inicializar las colas de estados

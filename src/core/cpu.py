@@ -13,7 +13,7 @@ class CPU:
         pass
 
     def ejecutar_ciclo(self) -> Optional[Proceso]:
-        # TP DO: Simula un ciclo de reloj de la CPU.
+        # To DO: Simula un ciclo de reloj de la CPU.
         pass
 
     def liberar(self) -> Optional[Proceso]:
