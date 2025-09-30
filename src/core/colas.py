@@ -52,6 +52,7 @@ class GestorColas:
     # TO DO: Implementar método para activar proceso suspendido
     # - Mover de suspendidos a listos si hay memoria disponible
     def activar_suspendido(self) -> bool:
+        # necesita algo que devuelva si hay mem. disponible
         pass
     
     # TO DO: Implementar método para asignar CPU a proceso

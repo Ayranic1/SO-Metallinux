@@ -27,3 +27,8 @@ class Particion:
     def espacio_disponible(self):
         pass
 
+
+# 100K destinados al Sistema Operativo
+#  250K para trabajos los más grandes.
+#  150K para trabajos medianos .
+#  50K   para trabajos pequeños.
