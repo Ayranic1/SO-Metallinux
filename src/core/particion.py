@@ -7,6 +7,7 @@ class Particion:
         self.tamaño = tamaño
         self.proceso_asignado = None
         self.fragmentacion_interna = 0
+        
     
     def __str__(self):
         return f"Partición {self.id}: {self.tamaño}K, inicio: {self.direccion_inicio}"
@@ -27,6 +28,11 @@ class Particion:
     def espacio_disponible(self):
         pass
 
+    # TO DO: verifica si la partición está libre
+    def disponible(self)->bool:
+        if (self.proceso_asignado):
+            return True
+        return False
 
 # 100K destinados al Sistema Operativo
 #  250K para trabajos los más grandes.
