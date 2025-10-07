@@ -1,4 +1,6 @@
 # Clase base para arrancar, si necesitas agregar mas cosas hacelo
+from proceso import Proceso
+from colas import GestorColas
 
 class Particion:
     def __init__(self, id: str, direccion_inicio: int, tamaño: int):
@@ -12,29 +14,33 @@ class Particion:
     def __str__(self):
         return f"Partición {self.id}: {self.tamaño}K, inicio: {self.direccion_inicio}"
     
-    # TO DO: Implementar método para asignar proceso a esta partición
-    def asignar_proceso(self, proceso):
-        pass
-    
-    # TO DO: Implementar método para liberar la partición
-    def liberar(self):
-        pass
-    
-    # TODO: Implementar método para verificar si está libre
-    def esta_libre(self):
-        pass
+    def asignar_proceso(self, Proceso):
+        # método para asignar proceso a esta partición
+        self.proceso_asignado = Proceso
+        self.fragmentacion_interna = self.tamaño - self.asignar_proceso
+
+        # TO DO: analizar donde realizar la comprobación
+
+    def liberar(self, gestorColas : GestorColas):
+        # Método para liberar la partición del proceso asignado y lo pone en la cola de terminados
+        gestorColas.terminados.append(self.proceso_asignado)
+        self.proceso_asignado = None
     
     # TO DO: Implementar método para obtener espacio disponible
     def espacio_disponible(self):
-        pass
+        # devuelve el espacio de la partición
+        return self.tamaño - self.proceso_asignado.tamaño()
 
+        
     # TO DO: verifica si la partición está libre
-    def disponible(self)->bool:
+    def esta_libre(self)->bool:
         if (self.proceso_asignado):
             return True
         return False
 
-# 100K destinados al Sistema Operativo
+
+
+#  100K destinados al Sistema Operativo.
 #  250K para trabajos los más grandes.
 #  150K para trabajos medianos .
-#  50K   para trabajos pequeños.
+#  50K  para trabajos pequeños.
