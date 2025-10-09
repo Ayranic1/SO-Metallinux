@@ -47,41 +47,55 @@ class Planificador(ABC):
     def __init__(self, gestor_colas: GestorColas):
         self.gestor_colas = gestor_colas
         self.tiempo_actual = 0
-    
 
-    # Método ABSTRACTO - cada algoritmo implementa su lógica de selección
     @abstractmethod
     def seleccionar_proximo_proceso_listo(self) -> Optional[Proceso]:
         pass
 
     def ejecutar(self) -> Optional[Proceso]:
-        pass
-    
-    # TO DO: Implementar método para manejar llegada de procesos
-    def manejar_llegadas(self, procesos_nuevos: list):
-        pass
-    
-    # TO DO: Implementar método para manejar finalización de proceso
-    def manejar_finalizacion(self, proceso: Proceso):
-        pass
-    
-    # TO DO: Implementar método para avanzar el tiempo de simulación
-    def avanzar_tiempo(self):
-        pass
+        # La finalización ahora se maneja en el bucle principal del simulador
+        if self.gestor_colas.ejecucion and self._necesita_preempcion():
+            self._preemptar()
+        
+        if self.gestor_colas.ejecucion is None:
+            proximo = self.seleccionar_proximo_proceso_listo()
+            if proximo:
+                self._asignar_cpu(proximo)
+        
+        return self.gestor_colas.ejecucion
 
-    # Estos metodos son abstractos porque depende del algoritmo de planificación que se esté aplicando la necesidad de usar
-    # preempción y cómo se va aplicar
-    
-    # Determina si se necesita preempción
+    def manejar_llegadas(self, procesos_nuevos: list):
+        for proceso in procesos_nuevos:
+            if proceso.tiempo_arribo == self.tiempo_actual:
+                print(f"Tiempo {self.tiempo_actual}: Llega el proceso {proceso.id}")
+                self.gestor_colas.agregar_nuevo(proceso)
+
+    def manejar_finalizacion(self) -> Optional[Proceso]:
+        if self.gestor_colas.ejecucion and self.gestor_colas.ejecucion.tiempo_restante <= 0:
+            proceso_terminado = self.gestor_colas.ejecucion
+            proceso_terminado.estado = "Terminado"
+            print(f"Tiempo {self.tiempo_actual}: Finaliza el proceso {proceso_terminado.id}")
+            self.gestor_colas.liberar_cpu(terminado=True)
+            return proceso_terminado
+        return None
+
+    def avanzar_tiempo(self):
+        self.tiempo_actual += 1
+        if self.gestor_colas.ejecucion:
+            self.gestor_colas.ejecucion.tiempo_restante -= 1
+
+    # Métodos que deben ser implementados por el planificador concreto (SRTF)
     @abstractmethod
     def _necesita_preempcion(self) -> bool:
         pass
-    
-    # Realiza la preempción del proceso actual
+
     @abstractmethod
     def _preemptar(self):
         pass
-    
-    # TO DO: Implementar método para generar reporte estadístico
-    def generar_reporte_estadistico(self) -> dict:
-        pass
+
+    # Métodos auxiliares que el planificador concreto usará
+    def _asignar_cpu(self, proceso: Proceso):
+        self.gestor_colas.listos.remove(proceso)
+        proceso.estado = "Ejecucion"
+        self.gestor_colas.ejecucion = proceso
+        print(f"Tiempo {self.tiempo_actual}: Se asigna CPU al proceso {proceso.id}")
