@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 from .proceso import Proceso
 from .colas import GestorColas
+from .cpu import CPU
 
 # Clase base para arrancar, si necesitas agregar mas cosas hacelo
 
@@ -44,8 +45,9 @@ class GestorMemoria(ABC):
         pass
 
 class Planificador(ABC):
-    def __init__(self, gestor_colas: GestorColas):
+    def __init__(self, gestor_colas: GestorColas, cpu: CPU):
         self.gestor_colas = gestor_colas
+        self.cpu = cpu 
         self.tiempo_actual = 0
 
     @abstractmethod
@@ -53,16 +55,15 @@ class Planificador(ABC):
         pass
 
     def ejecutar(self) -> Optional[Proceso]:
-        # La finalización ahora se maneja en el bucle principal del simulador
-        if self.gestor_colas.ejecucion and self._necesita_preempcion():
+        if self._necesita_preempcion():
             self._preemptar()
         
-        if self.gestor_colas.ejecucion is None:
+        if self.cpu.esta_libre():
             proximo = self.seleccionar_proximo_proceso_listo()
             if proximo:
                 self._asignar_cpu(proximo)
         
-        return self.gestor_colas.ejecucion
+        return self.cpu.get_proceso_actual()
 
     def manejar_llegadas(self, procesos_nuevos: list):
         for proceso in procesos_nuevos:
@@ -71,18 +72,18 @@ class Planificador(ABC):
                 self.gestor_colas.agregar_nuevo(proceso)
 
     def manejar_finalizacion(self) -> Optional[Proceso]:
-        if self.gestor_colas.ejecucion and self.gestor_colas.ejecucion.tiempo_restante <= 0:
-            proceso_terminado = self.gestor_colas.ejecucion
+        proceso_en_cpu = self.cpu.get_proceso_actual()
+        if proceso_en_cpu and proceso_en_cpu.tiempo_restante <= 0:
+            proceso_terminado = self.cpu.liberar() 
             proceso_terminado.estado = "Terminado"
             print(f"Tiempo {self.tiempo_actual}: Finaliza el proceso {proceso_terminado.id}")
-            self.gestor_colas.liberar_cpu(terminado=True)
+            self.gestor_colas.terminados.append(proceso_terminado) 
             return proceso_terminado
         return None
 
     def avanzar_tiempo(self):
         self.tiempo_actual += 1
-        if self.gestor_colas.ejecucion:
-            self.gestor_colas.ejecucion.tiempo_restante -= 1
+        self.cpu.ejecutar_ciclo()
 
     # Métodos que deben ser implementados por el planificador concreto (SRTF)
     @abstractmethod
@@ -96,6 +97,5 @@ class Planificador(ABC):
     # Métodos auxiliares que el planificador concreto usará
     def _asignar_cpu(self, proceso: Proceso):
         self.gestor_colas.listos.remove(proceso)
-        proceso.estado = "Ejecucion"
-        self.gestor_colas.ejecucion = proceso
+        self.cpu.dispatch(proceso)
         print(f"Tiempo {self.tiempo_actual}: Se asigna CPU al proceso {proceso.id}")

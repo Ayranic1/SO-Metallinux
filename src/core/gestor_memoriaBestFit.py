@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from .interfaces import GestorMemoria
+from plantillas import GestorMemoria
 from particion import Particion
 
 
