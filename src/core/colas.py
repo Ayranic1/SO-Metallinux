@@ -31,9 +31,11 @@ class GestorColas:
         '''
             Toma el primero de la lista de nuevos y lo mueve a la lista de listos.
         '''
-        self.nuevos[0].estado = "Listo"
-        self.listos.append(self.nuevos[0])
-        self.listos.pop(0)
+        proceso = self.nuevos[0]
+        self.nuevos.pop(0)
+        proceso.estado = "Listo"
+        self.listos.append(proceso)
+        
 
 
 
@@ -53,6 +55,7 @@ class GestorColas:
     # - Mover de suspendidos a listos si hay memoria disponible
     def activar_suspendido(self) -> bool:
         # necesita algo que devuelva si hay mem. disponible
+        if ()
         pass
     
     # TO DO: Implementar método para asignar CPU a proceso
