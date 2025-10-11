@@ -35,8 +35,8 @@ class GestorColas:
             proceso = self.nuevos[0]
             id = gm.encontrar_particion(proceso.tamaño, self.listos)
             if id != False:
-                
-                 # agregar a listos con el gestor de memoria (gm)
+                self.listos[id] = proceso
+                self.nuevos.pop(0)
             else: 
                 return False
         return False
@@ -57,6 +57,9 @@ class GestorColas:
     # - Mover de suspendidos a listos si hay memoria disponible
     def activar_suspendido(self) -> bool:
         # necesita algo que devuelva si hay mem. disponible
+        
+
+
         pass
     
     # TO DO: Implementar método para asignar CPU a proceso
