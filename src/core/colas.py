@@ -31,16 +31,7 @@ class GestorColas:
         '''
             Toma el primero de la lista de nuevos y lo mueve a la lista de listos.
         '''
-        if gm.hay_libre(self.listos):
-            proceso = self.nuevos[0]
-            id = gm.encontrar_particion(proceso.tamaño, self.listos)
-            if id != False:
-                self.listos[id] = proceso
-                self.nuevos.pop(0)
-                return True
-            else: 
-                return False
-        return False
+        return gm.proceso_a_memoria(self.listos, self.nuevos)
         
     
     # TO DO: Implementar método para mover proceso a suspendidos
@@ -57,21 +48,11 @@ class GestorColas:
     # TO DO: Implementar método para activar proceso suspendido
     # - Mover de suspendidos a listos si hay memoria disponible
     def activar_suspendido(self) -> bool:
-        # necesita algo que devuelva si hay mem. disponible
-        if gm.hay_libre():
-            proceso = self.suspendidos[0]
-            id = gm.encontrar_particion(proceso.tamaño, self.listos)
-            if id != False:
-                self.listos[id] = proceso
-                self.suspendidos.pop(0)
-                return True
-            else: 
-                return False
-        return False
+        
+        return gm.proceso_a_memoria(self.listos, self.suspendidos)
+        
 
 
-        pass
-    
     # TO DO: Implementar método para asignar CPU a proceso
     def asignar_cpu(self, proceso: Proceso):
         pass
