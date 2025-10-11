@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from .proceso import Proceso
-from .colas import GestorColas
+
+if TYPE_CHECKING:
+    from .colas import GestorColas
 from .cpu import CPU
 
 # Clase base para arrancar, si necesitas agregar mas cosas hacelo
@@ -45,7 +47,7 @@ class GestorMemoria(ABC):
         pass
 
 class Planificador(ABC):
-    def __init__(self, gestor_colas: GestorColas, cpu: CPU):
+    def __init__(self, gestor_colas: 'GestorColas', cpu: CPU):
         self.gestor_colas = gestor_colas
         self.cpu = cpu 
         self.tiempo_actual = 0

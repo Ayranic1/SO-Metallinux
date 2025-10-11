@@ -1,6 +1,9 @@
 # Clase base para arrancar, si necesitas agregar mas cosas hacelo
-from proceso import Proceso
-from colas import GestorColas
+from typing import TYPE_CHECKING
+from .proceso import Proceso
+
+if TYPE_CHECKING:
+    from .colas import GestorColas
 
 class Particion:
     def __init__(self, id: str, direccion_inicio: int, tamaño: int):
@@ -21,7 +24,7 @@ class Particion:
 
         # TO DO: analizar donde realizar la comprobación
 
-    def liberar(self, gestorColas : GestorColas):
+    def liberar(self, gestorColas : 'GestorColas'):
         # Método para liberar la partición del proceso asignado y lo pone en la cola de terminados
         gestorColas.terminados.append(self.proceso_asignado)
         self.proceso_asignado = None
