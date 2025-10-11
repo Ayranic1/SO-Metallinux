@@ -41,6 +41,7 @@ class GestorColas:
         '''
         self.ejecucion.estado = "Suspendido"
         self.suspendidos.append(self.ejecucion)
+        self.ejecucion = None
         
 
 
@@ -55,9 +56,11 @@ class GestorColas:
 
     # TO DO: Implementar método para asignar CPU a proceso
     def asignar_cpu(self, proceso: Proceso):
-        pass
+        self.a_suspendidos(self.ejecucion)
+        self.ejecucion = proceso
     
     # TO DO: Implementar método para liberar CPU
     def liberar_cpu(self, terminado: bool = True):
-        pass
-    
+        self.ejecucion.estado = "Terminado"
+        self.terminados.append(self.ejecucion)
+        self.ejecucion = None
