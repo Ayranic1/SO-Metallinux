@@ -38,7 +38,7 @@ class GestorMemoriaBestFit(GestorMemoria):
     # método para saber si alguna de las particiones está libre
     def hay_libre(self, cola_listo: list)-> bool:
         for particion in cola_listo:
-            if particion.disponible():
+            if particion.esta_libre():
                 return True
         return False
 

@@ -31,10 +31,15 @@ class GestorColas:
         '''
             Toma el primero de la lista de nuevos y lo mueve a la lista de listos.
         '''
-        if gm.hay_libre():
+        if gm.hay_libre(self.listos):
             proceso = self.nuevos[0]
-            gm.
-            # agregar a listos con el gestor de memoria (gm)
+            id = gm.encontrar_particion(proceso.tamaño, self.listos)
+            if id != False:
+                
+                 # agregar a listos con el gestor de memoria (gm)
+            else: 
+                return False
+        return False
         
     
     # TO DO: Implementar método para mover proceso a suspendidos
