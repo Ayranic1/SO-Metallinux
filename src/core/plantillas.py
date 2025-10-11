@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 from .proceso import Proceso
 from .colas import GestorColas
+from particion import Particion
 
 # Clase base para arrancar, si necesitas agregar mas cosas hacelo
 
@@ -18,10 +19,17 @@ class GestorMemoria(ABC):
     
     def inicializar_particiones(self):
         # TO DO: Crear e inicializar la lista de particiones
-        pass
-    
+        tams = [100, 250, 150, 50] # tamaños de particiones
+        id=0
+        ult_dir = 0
+        for t in tams:
+            particion = Particion(str(id),ult_dir, t)
+            self.particiones.append(particion)
+            ult_dir+= t
+            id+=1
+
     # TO DO: Implementar algoritmo (en este caso BEST-FIT) para asignación de memoria
-    # Es solo el algoritmo puro
+    # Es solo el algoritmo puro 
     @abstractmethod
     def encontrar_particion(self, tamaño_proceso):
         pass
