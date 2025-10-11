@@ -1,7 +1,7 @@
 # Clase base para arrancar, si necesitas agregar mas cosas hacelo
 
 from .proceso import Proceso
-from core.gestor_memoriaBestFit import GestorMemoria
+from core.gestor_memoriaBestFit import GestorMemoriaBestFit as gm
 
 class GestorColas:
     def __init__(self):
@@ -24,21 +24,18 @@ class GestorColas:
         '''
         self.nuevos.append(proceso)
         self.nuevos.sort(key=lambda proceso: proceso.tiempo_irrupcion, reverse=True)
-
+        
     
     # TO DO: Implementar método para mover proceso de nuevos a listos
     def nuevo_a_listo(self, proceso: Proceso):
         '''
             Toma el primero de la lista de nuevos y lo mueve a la lista de listos.
         '''
-        proceso = self.nuevos[0]
-        self.nuevos.pop(0)
-        proceso.estado = "Listo"
-        self.listos.append(proceso)
+        if gm.hay_libre():
+            proceso = self.nuevos[0]
+            gm.
+            # agregar a listos con el gestor de memoria (gm)
         
-
-
-
     
     # TO DO: Implementar método para mover proceso a suspendidos
     def a_suspendidos(self, proceso: Proceso):
@@ -55,7 +52,6 @@ class GestorColas:
     # - Mover de suspendidos a listos si hay memoria disponible
     def activar_suspendido(self) -> bool:
         # necesita algo que devuelva si hay mem. disponible
-        if ()
         pass
     
     # TO DO: Implementar método para asignar CPU a proceso

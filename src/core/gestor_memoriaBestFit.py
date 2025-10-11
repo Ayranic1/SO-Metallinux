@@ -5,24 +5,25 @@ from particion import Particion
 
 class GestorMemoriaBestFit(GestorMemoria):
     
-    particiones = []
 
     # realiza las particiones 
-    def realizar_particiones(self):
+    def realizar_particiones(self, cola_listo: list)->list:
         tams = [100, 250, 150, 50] # tamaños de particiones
         id=0
         ult_dir = 0
         for t in tams:
-            self.particiones[id] = Particion(str(id),ult_dir, t)
+            cola_listo[id] = Particion(str(id),ult_dir, t)
             ult_dir+= t
             id+=1
 
+        return cola_listo
+
     
-    def encontrar_particion(self, tamaño_proceso):
+    def encontrar_particion(self, tamaño_proceso: int, cola_listo: list):
         # se busca la partició acorde a la política de asignación best-fit
 
         espacio_ideal = 550
-        for particion in self.particiones:
+        for particion in cola_listo:
 
             if particion.esta_libre():
                 espacio_libre = particion.tamaño - tamaño_proceso
@@ -31,12 +32,12 @@ class GestorMemoriaBestFit(GestorMemoria):
                     espacio_ideal = espacio_libre
         
         if (espacio_ideal!=550):
-            return particion_ideal
+            return particion_ideal.id
         else: return False
 
     # método para saber si alguna de las particiones está libre
-    def hay_libre(self)-> bool:
-        for particion in self.particiones:
+    def hay_libre(self, cola_listo: list)-> bool:
+        for particion in cola_listo:
             if particion.disponible():
                 return True
         return False
