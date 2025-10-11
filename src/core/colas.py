@@ -37,6 +37,7 @@ class GestorColas:
             if id != False:
                 self.listos[id] = proceso
                 self.nuevos.pop(0)
+                return True
             else: 
                 return False
         return False
@@ -57,7 +58,16 @@ class GestorColas:
     # - Mover de suspendidos a listos si hay memoria disponible
     def activar_suspendido(self) -> bool:
         # necesita algo que devuelva si hay mem. disponible
-        
+        if gm.hay_libre():
+            proceso = self.suspendidos[0]
+            id = gm.encontrar_particion(proceso.tamaño, self.listos)
+            if id != False:
+                self.listos[id] = proceso
+                self.suspendidos.pop(0)
+                return True
+            else: 
+                return False
+        return False
 
 
         pass

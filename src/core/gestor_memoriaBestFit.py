@@ -42,6 +42,18 @@ class GestorMemoriaBestFit(GestorMemoria):
                 return True
         return False
 
+    # método para agregar un proceso a memoria
+    def proceso_a_memoria(self, cola_listo: list, cola_del_proceso: list)->bool :
+        
+        if self.hay_libre(cola_listo):
+            proceso = cola_del_proceso[0]
+            id = self.encontrar_particion(proceso.tamaño, cola_listo)
+            if id != False:
+                cola_listo[id] = proceso
+                cola_del_proceso.pop(0)
+                return True
+
+        return False
 
 #  100K destinados al Sistema Operativo.
 #  250K para trabajos los más grandes.
