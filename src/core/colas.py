@@ -27,12 +27,21 @@ class GestorColas:
         
     
     # TO DO: Implementar método para mover proceso de nuevos a listos
-    def nuevo_a_listo(self, proceso: Proceso):
+    def nuevo_a_listo(self, proceso: Proceso, GestorMemoria: gm):
         '''
-            Toma el primero de la lista de nuevos y lo mueve a la lista de listos.
+            Toma el proceso y lo saca de la cola de nuevos y lo pone en la cola de listos
         '''
-        return gm.proceso_a_memoria(self.listos, self.nuevos)
-        
+        if GestorMemoria.hay_libre():
+            id = GestorMemoria.encontrar_particion(proceso.tamaño)
+            if id != False:
+                self.listos.append(proceso)
+                try:
+                    self.nuevos.remove(proceso)
+                except ValueError:
+                    print(f"ERROR: El proceso {proceso.id} no se encontró en la cola de nuevos.")
+                    return False
+                return True
+        return False
     
     # TO DO: Implementar método para mover proceso a suspendidos
     def a_suspendidos(self, proceso: Proceso):
@@ -48,9 +57,21 @@ class GestorColas:
     
     # TO DO: Implementar método para activar proceso suspendido
     # - Mover de suspendidos a listos si hay memoria disponible
-    def activar_suspendido(self) -> bool:
-        
-        return gm.proceso_a_memoria(self.listos, self.suspendidos)
+    def activar_suspendido(self, proceso: Proceso, GestorMemoria: gm):
+        '''
+            Toma el proceso y lo saca de la cola de suspendidos y lo pone en la cola de listos
+        '''
+        if GestorMemoria.hay_libre():
+            id = GestorMemoria.encontrar_particion(proceso.tamaño)
+            if id != False:
+                self.listos.append(proceso)
+                try:
+                    self.suspendidos.remove(proceso)
+                except ValueError:
+                    print(f"ERROR: El proceso {proceso.id} no se encontró en la cola de suspendidos.")
+                    return False
+                return True
+        return False
         
 
 
