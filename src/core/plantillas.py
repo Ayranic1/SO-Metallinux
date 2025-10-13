@@ -42,9 +42,9 @@ class GestorMemoria(ABC):
             id = self.encontrar_particion(proceso.tamaño, self.particiones)
             if id != False:
                 self.particiones[id] = proceso
-                return True
+                # return True
 
-        return False
+        # return False
     
     # TO DO: Implementar método para liberar memoria de un proceso
     def liberar_memoria(self, proceso):

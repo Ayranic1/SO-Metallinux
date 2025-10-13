@@ -35,6 +35,7 @@ class GestorColas:
             id = GestorMemoria.encontrar_particion(proceso.tamaño)
             if id != False:
                 self.listos.append(proceso)
+                gm.asignar_memoria(proceso)
                 try:
                     self.nuevos.remove(proceso)
                 except ValueError:
@@ -52,8 +53,6 @@ class GestorColas:
         self.suspendidos.append(self.ejecucion)
         self.ejecucion = None
         
-
-
     
     # TO DO: Implementar método para activar proceso suspendido
     # - Mover de suspendidos a listos si hay memoria disponible
@@ -65,6 +64,7 @@ class GestorColas:
             id = GestorMemoria.encontrar_particion(proceso.tamaño)
             if id != False:
                 self.listos.append(proceso)
+                gm.asignar_memoria(proceso)
                 try:
                     self.suspendidos.remove(proceso)
                 except ValueError:
@@ -72,7 +72,6 @@ class GestorColas:
                     return False
                 return True
         return False
-        
 
 
     # TO DO: Implementar método para asignar CPU a proceso
