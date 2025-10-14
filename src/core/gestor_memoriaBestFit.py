@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from .interfaces import GestorMemoria
-from particion import Particion
+from .plantillas import GestorMemoria
+from .particion import Particion
 
 
 class GestorMemoriaBestFit(GestorMemoria):
