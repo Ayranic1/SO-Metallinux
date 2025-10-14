@@ -1,7 +1,7 @@
 # Clase base para arrancar, si necesitas agregar mas cosas hacelo
 
 from .proceso import Proceso
-from core.gestor_memoriaBestFit import GestorMemoria
+from core.gestor_memoriaBestFit import GestorMemoriaBestFit as gm
 
 class GestorColas:
     def __init__(self):
@@ -24,19 +24,25 @@ class GestorColas:
         '''
         self.nuevos.append(proceso)
         self.nuevos.sort(key=lambda proceso: proceso.tiempo_irrupcion, reverse=True)
-
+        
     
     # TO DO: Implementar método para mover proceso de nuevos a listos
-    def nuevo_a_listo(self, proceso: Proceso):
+    def nuevo_a_listo(self, proceso: Proceso, GestorMemoria: gm):
         '''
-            Toma el primero de la lista de nuevos y lo mueve a la lista de listos.
+            Toma el proceso y lo saca de la cola de nuevos y lo pone en la cola de listos
         '''
-        self.nuevos[0].estado = "Listo"
-        self.listos.append(self.nuevos[0])
-        self.listos.pop(0)
-
-
-
+        if GestorMemoria.hay_libre():
+            id = GestorMemoria.encontrar_particion(proceso.tamaño)
+            if id != False:
+                self.listos.append(proceso)
+                gm.asignar_memoria(proceso)
+                try:
+                    self.nuevos.remove(proceso)
+                except ValueError:
+                    print(f"ERROR: El proceso {proceso.id} no se encontró en la cola de nuevos.")
+                    return False
+                return True
+        return False
     
     # TO DO: Implementar método para mover proceso a suspendidos
     def a_suspendidos(self, proceso: Proceso):
@@ -45,21 +51,36 @@ class GestorColas:
         '''
         self.ejecucion.estado = "Suspendido"
         self.suspendidos.append(self.ejecucion)
+        self.ejecucion = None
         
-
-
     
     # TO DO: Implementar método para activar proceso suspendido
     # - Mover de suspendidos a listos si hay memoria disponible
-    def activar_suspendido(self) -> bool:
-        # necesita algo que devuelva si hay mem. disponible
-        pass
-    
+    def activar_suspendido(self, proceso: Proceso, GestorMemoria: gm):
+        '''
+            Toma el proceso y lo saca de la cola de suspendidos y lo pone en la cola de listos
+        '''
+        if GestorMemoria.hay_libre():
+            id = GestorMemoria.encontrar_particion(proceso.tamaño)
+            if id != False:
+                self.listos.append(proceso)
+                gm.asignar_memoria(proceso)
+                try:
+                    self.suspendidos.remove(proceso)
+                except ValueError:
+                    print(f"ERROR: El proceso {proceso.id} no se encontró en la cola de suspendidos.")
+                    return False
+                return True
+        return False
+
+
     # TO DO: Implementar método para asignar CPU a proceso
     def asignar_cpu(self, proceso: Proceso):
-        pass
+        self.a_suspendidos(self.ejecucion)
+        self.ejecucion = proceso
     
     # TO DO: Implementar método para liberar CPU
     def liberar_cpu(self, terminado: bool = True):
-        pass
-    
+        self.ejecucion.estado = "Terminado"
+        self.terminados.append(self.ejecucion)
+        self.ejecucion = None

@@ -21,10 +21,17 @@ class GestorMemoria(ABC):
     
     def inicializar_particiones(self):
         # TO DO: Crear e inicializar la lista de particiones
-        pass
-    
+        tams = [100, 250, 150, 50] # tamaños de particiones
+        id=0
+        ult_dir = 0
+        for t in tams:
+            particion = Particion(str(id),ult_dir, t)
+            self.particiones.append(particion)
+            ult_dir+= t
+            id+=1
+
     # TO DO: Implementar algoritmo (en este caso BEST-FIT) para asignación de memoria
-    # Es solo el algoritmo puro
+    # Es solo el algoritmo puro 
     @abstractmethod
     def encontrar_particion(self, tamaño_proceso):
         pass
@@ -32,19 +39,65 @@ class GestorMemoria(ABC):
     # TO DO: Implementar método para asignar proceso a memoria
     # Utiliza encontrar_particion para tomar la decision y aplica los cambios en memoria
     def asignar_memoria(self, proceso):
-        pass
+
+        if self.hay_libre(self.particiones):
+            id = self.encontrar_particion(proceso.tamaño, self.particiones)
+            if id != False:
+                self.particiones[id] = proceso
+                # return True
+
+        # return False
     
     # TO DO: Implementar método para liberar memoria de un proceso
     def liberar_memoria(self, proceso):
-        pass
+        for particion in self.particiones:
+            if (particion.proceso_asignado == proceso):
+                particion.proceso_asignado = None
+        
     
     # TO DO: Implementar método para obtener estado de memoria
-    def obtener_estado_memoria(self):
-        pass
+    def mostrar_estado_memoria(self):
+        """
+            Devuelve un diccionario con los estados de cada partición
+        """
+        estado_actual = []
+    
+        for particion in self.particiones:
+        
+            if particion.proceso_asignado is None:
+                estado = "Libre"
+                proceso_info = "N/A"
+            else:
+                estado = "Ocupada"
+
+                proceso_info = f"PID={particion.proceso_asignado.pid}, Nombre='{particion.proceso_asignado.nombre}'"
+            
+            registro = {
+                "ID_Particion": particion.id_particion,
+                "Tamaño": particion.tamano,
+                "Estado": estado,
+                "Proceso_Asignado": proceso_info
+            }
+            estado_actual.append(registro)
+            
+        return estado_actual
     
     # TO DO: Implementar método para verificar grado de multiprogramación
     def grado_multiprogramacion_actual(self):
-        pass
+        grado = 0
+        for particion in self.particiones:
+            if particion.proceso_asignado != None:
+                grado += 1
+        return grado
+    
+    # método para saber si alguna de las particiones está libre
+    def hay_libre(self)-> bool:
+        for particion in self.particiones:
+            if particion.esta_libre():
+                return True
+        return False
+
+
 
 class Planificador(ABC):
     def __init__(self, gestor_colas: 'GestorColas', cpu: CPU):
