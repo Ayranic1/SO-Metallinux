@@ -46,6 +46,7 @@ class GestorMemoria(ABC):
                 for particion in self.particiones:
                     if particion.id == particion_id:
                         particion.proceso_asignado = proceso
+                        particion.fragmentacion_interna = particion.tamaño - proceso.tamaño
                         return True
         return False
     
@@ -54,6 +55,7 @@ class GestorMemoria(ABC):
         for particion in self.particiones:
             if (particion.proceso_asignado == proceso):
                 particion.proceso_asignado = None
+                particion.fragmentacion_interna = 0
         
     
     # TO DO: Implementar método para obtener estado de memoria

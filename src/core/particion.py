@@ -16,13 +16,6 @@ class Particion:
     
     def __str__(self):
         return f"Partición {self.id}: {self.tamaño}K, inicio: {self.direccion_inicio}"
-    
-    def asignar_proceso(self, Proceso):
-        # método para asignar proceso a esta partición
-        self.proceso_asignado = Proceso
-        self.fragmentacion_interna = self.tamaño - self.asignar_proceso
-
-        # TO DO: analizar donde realizar la comprobación
 
     def liberar(self, gestorColas : 'GestorColas'):
         # Método para liberar la partición del proceso asignado y lo pone en la cola de terminados
