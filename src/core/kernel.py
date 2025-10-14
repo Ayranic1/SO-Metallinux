@@ -43,9 +43,6 @@ class Kernel:
                 self.gestor_colas.agregar_nuevo(proceso)
 
     def _intentar_asignar_memoria(self):
-        # TO DO: La lógica de multiprogramación se implementaría aquí.
-        # Por ahora, se asigna si hay cualquier partición libre.
-
         # Prioridad 1: Procesos listos pero suspendidos
         for proceso in self.gestor_colas.suspendidos[:]: # Iterar sobre una copia
             if self.gestor_memoria.asignar_memoria(proceso):

@@ -11,7 +11,7 @@ class GestorMemoriaBestFit(GestorMemoria):
 
         espacio_ideal = 550
         for particion in self.particiones:
-            if particion.esta_libre():
+            if particion.esta_libre() and particion.id != '0':
                 espacio_libre = particion.tamaño - tamaño_proceso
                 if ((espacio_libre > 0) and (espacio_libre < espacio_ideal)):
                     particion_ideal = particion
