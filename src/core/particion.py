@@ -37,9 +37,7 @@ class Particion:
         
     # TO DO: verifica si la partición está libre
     def esta_libre(self)->bool:
-        if (self.proceso_asignado):
-            return True
-        return False
+        return self.proceso_asignado is None
 
 
 

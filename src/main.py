@@ -4,6 +4,7 @@ import sys
 sys.path.append(os.path.dirname(__file__))
 
 from utils.archivo_reader import LectorArchivos
+from core.simulador import Simulador
 
 def main():
     ruta_archivo = "data/procesos.csv"
@@ -16,7 +17,9 @@ def main():
     
     if procesos:
         print("Iniciando simulación...")
-        # TO DO : llamar los metodos para el simulador
+        simulador = Simulador(procesos)
+        simulador.run()
+        simulador.generar_reporte_estadistico()
     else:
         print("No se pueden cargar procesos debido a errores")
 

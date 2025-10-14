@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional, TYPE_CHECKING
 from .proceso import Proceso
+from .particion import Particion
 
 if TYPE_CHECKING:
     from .colas import GestorColas
@@ -39,14 +40,14 @@ class GestorMemoria(ABC):
     # TO DO: Implementar método para asignar proceso a memoria
     # Utiliza encontrar_particion para tomar la decision y aplica los cambios en memoria
     def asignar_memoria(self, proceso):
-
-        if self.hay_libre(self.particiones):
-            id = self.encontrar_particion(proceso.tamaño, self.particiones)
-            if id != False:
-                self.particiones[id] = proceso
-                # return True
-
-        # return False
+        if self.hay_libre():
+            particion_id = self.encontrar_particion(proceso.tamaño)
+            if particion_id is not False:
+                for particion in self.particiones:
+                    if particion.id == particion_id:
+                        particion.proceso_asignado = proceso
+                        return True
+        return False
     
     # TO DO: Implementar método para liberar memoria de un proceso
     def liberar_memoria(self, proceso):
