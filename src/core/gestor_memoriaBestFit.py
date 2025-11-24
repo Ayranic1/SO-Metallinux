@@ -1,29 +1,35 @@
 from abc import ABC, abstractmethod
 from .plantillas import GestorMemoria
 from .particion import Particion
-
+from typing import Optional # Se añade para mejor tipado
 
 class GestorMemoriaBestFit(GestorMemoria):
     
     
-    def encontrar_particion(self, tamaño_proceso: int):
-        # se busca la partició acorde a la política de asignación best-fit
+    def encontrar_particion(self, tamaño_proceso: int) -> Optional[str]:
+        # Se busca la partición acorde a la política de asignación best-fit
+        
+        # Inicializar con un valor muy alto para el espacio ideal (mínima fragmentación)
+        espacio_ideal = float('inf') 
+        particion_ideal: Optional[Particion] = None
 
-        espacio_ideal = 550
         for particion in self.particiones:
-            if particion.esta_libre():
+            # La partición '0' es para el SO y no debe usarse [cite: 58]
+            if particion.esta_libre() and particion.id != '0':
                 espacio_libre = particion.tamaño - tamaño_proceso
-                if ((espacio_libre > 0) and (espacio_libre < espacio_ideal)):
+                
+                # Debe caber (espacio_libre >= 0) y ser el 'mejor ajuste' (mínima fragmentación)
+                if espacio_libre >= 0 and espacio_libre < espacio_ideal:
                     particion_ideal = particion
                     espacio_ideal = espacio_libre
         
-        if (espacio_ideal!=550):
+        if particion_ideal:
             return particion_ideal.id
-        else: return False
+        else: 
+            # Retorna False para indicar que no se encontró partición.
+            return False 
 
-
-
-#  100K destinados al Sistema Operativo. v
+#  100K destinados al Sistema Operativo. 
 #  250K para trabajos los más grandes.
 #  150K para trabajos medianos .
 #  50K  para trabajos pequeños.

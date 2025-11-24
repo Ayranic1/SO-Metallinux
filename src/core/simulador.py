@@ -1,3 +1,4 @@
+import sys
 from typing import List
 from .proceso import Proceso
 from .cpu import CPU
@@ -5,6 +6,14 @@ from .colas import GestorColas
 from .gestor_memoriaBestFit import GestorMemoriaBestFit
 from .planificadorSRTF import PlanificadorSRTF
 from .kernel import Kernel
+
+try:
+    from tabulate import tabulate
+    TABULATE_AVAILABLE = True
+except ImportError:
+    print("Tabulate library not found. Por favor, instale tabulate: pip install tabulate")
+    tabulate = None
+    TABULATE_AVAILABLE = False
 
 class Simulador:
     def __init__(self, procesos: List[Proceso]):
@@ -78,44 +87,128 @@ class Simulador:
         print(f"Proceso {proceso.id} terminado. Retorno: {tiempo_retorno}, Espera: {tiempo_espera}")
 
     def _imprimir_estado_ciclo(self):
-        # Estado del procesador
         proceso_en_cpu = self.kernel.planificador.cpu.get_proceso_actual()
-        if proceso_en_cpu:
-            print(f"CPU: Proceso {proceso_en_cpu.id} (Restante: {proceso_en_cpu.tiempo_restante})")
-        else:
-            print("CPU: Ociosa")
+        cpu_status = f"Proceso {proceso_en_cpu.id} (Restante: {proceso_en_cpu.tiempo_restante})" if proceso_en_cpu else "Ociosa"
+        print(f"CPU: {cpu_status}")
 
-        # Tabla de particiones de memoria
+        # Tabla de Particiones de Memoria
         print("\n--- Tabla de Particiones de Memoria ---")
-        print("{:<12} {:<15} {:<10} {:<15} {:<20}".format('ID Partición', 'Dirección Inicio', 'Tamaño', 'ID Proceso', 'Fragmentación Int.'))
+        headers = ['ID Partición', 'Dirección Inicio', 'Tamaño', 'ID Proceso', 'Fragmentación Int.']
+        table = []
         for p in self.kernel.gestor_memoria.particiones:
-            id_proceso = p.proceso_asignado.id if p.proceso_asignado else 'N/A'
-            print("{:<12} {:<15} {:<10} {:<15} {:<20}".format(p.id, p.direccion_inicio, p.tamaño, id_proceso, p.fragmentacion_interna))
+            id_proceso = p.proceso_asignado.id if p.proceso_asignado else 'Libre'
+            frag_interna = p.fragmentacion_interna if p.fragmentacion_interna is not None else 0
+            table.append([p.id, p.direccion_inicio, p.tamaño, id_proceso, frag_interna])
+        
+        if TABULATE_AVAILABLE:
+            print(tabulate(table, headers=headers, tablefmt="grid"))
+        else:
+            # Formato manual mejorado para tablas ASCII
+            print(self._crear_tabla_manual(headers, table))
 
-        # Cola de procesos listos
+        # Cola de Listos
         print("\n--- Cola de Listos ---")
         if self.kernel.gestor_colas.listos:
-            print(", ".join([p.id for p in self.kernel.gestor_colas.listos]))
+            procesos_listos = [f"{p.id} (R:{p.tiempo_restante})" for p in self.kernel.gestor_colas.listos]
+            if TABULATE_AVAILABLE:
+                print(tabulate([[", ".join(procesos_listos)]], headers=["Procesos"], tablefmt="grid"))
+            else:
+                print("┌" + "─" * (len(", ".join(procesos_listos)) + 2) + "┐")
+                print("│ " + ", ".join(procesos_listos) + " │")
+                print("└" + "─" * (len(", ".join(procesos_listos)) + 2) + "┘")
         else:
-            print("(Vacía)")
+            if TABULATE_AVAILABLE:
+                print(tabulate([["(Vacía)"]], headers=["Procesos"], tablefmt="grid"))
+            else:
+                print("┌─────────┐")
+                print("│ (Vacía) │")
+                print("└─────────┘")
 
-        # Cola de procesos suspendidos
+        # Cola de Suspendidos
         print("\n--- Cola de Suspendidos ---")
         if self.kernel.gestor_colas.suspendidos:
-            print(", ".join([p.id for p in self.kernel.gestor_colas.suspendidos]))
+            procesos_suspendidos = [p.id for p in self.kernel.gestor_colas.suspendidos]
+            if TABULATE_AVAILABLE:
+                print(tabulate([[", ".join(procesos_suspendidos)]], headers=["Procesos"], tablefmt="grid"))
+            else:
+                print("┌" + "─" * (len(", ".join(procesos_suspendidos)) + 2) + "┐")
+                print("│ " + ", ".join(procesos_suspendidos) + " │")
+                print("└" + "─" * (len(", ".join(procesos_suspendidos)) + 2) + "┘")
         else:
-            print("(Vacía)")
+            if TABULATE_AVAILABLE:
+                print(tabulate([["(Vacía)"]], headers=["Procesos"], tablefmt="grid"))
+            else:
+                print("┌─────────┐")
+                print("│ (Vacía) │")
+                print("└─────────┘")
+
+    def _crear_tabla_manual(self, headers, data):
+        """Crea una tabla ASCII manualmente cuando tabulate no está disponible"""
+        # Calcular anchos de columnas
+        col_widths = []
+        for i, header in enumerate(headers):
+            max_width = len(str(header))
+            for row in data:
+                max_width = max(max_width, len(str(row[i])))
+            col_widths.append(max_width + 2)  # +2 para padding
+        
+        # Crear línea separadora
+        separator = "┌"
+        for width in col_widths:
+            separator += "─" * width + "┬"
+        separator = separator[:-1] + "┐"
+        
+        # Crear línea de headers
+        header_line = "│"
+        for i, header in enumerate(headers):
+            header_line += f" {header:<{col_widths[i]-2}} │"
+        
+        # Crear línea media
+        middle_sep = "├"
+        for width in col_widths:
+            middle_sep += "─" * width + "┼"
+        middle_sep = middle_sep[:-1] + "┤"
+        
+        # Crear líneas de datos
+        data_lines = []
+        for row in data:
+            data_line = "│"
+            for i, cell in enumerate(row):
+                data_line += f" {str(cell):<{col_widths[i]-2}} │"
+            data_lines.append(data_line)
+        
+        # Crear línea final
+        bottom_sep = "└"
+        for width in col_widths:
+            bottom_sep += "─" * width + "┴"
+        bottom_sep = bottom_sep[:-1] + "┘"
+        
+        # Construir tabla completa
+        table_str = separator + "\n" + header_line + "\n" + middle_sep + "\n"
+        table_str += "\n".join(data_lines) + "\n" + bottom_sep
+        
+        return table_str
 
     def generar_reporte_estadistico(self) -> dict:
-        print("\n--- Reporte Estadístico ---")
+        print("\n" + "="*50)
+        print("REPORTE ESTADÍSTICO FINAL")
+        print("="*50)
+
         num_terminados = len(self.estadisticas['tiempos_retorno'])
 
-        # Tiempos de retorno y espera por proceso
-        print("\n--- Tiempos por Proceso ---")
-        print("{:<10} {:<15} {:<15}".format('Proceso', 'T. Retorno', 'T. Espera'))
+        # Tabla de tiempos por proceso
+        print("\n--- TIEMPOS POR PROCESO ---")
+        headers = ['Proceso', 'T. Retorno', 'T. Espera']
+        table = []
         for pid in self.estadisticas['tiempos_retorno']:
-            print("{:<10} {:<15} {:<15}".format(pid, self.estadisticas['tiempos_retorno'][pid], self.estadisticas['tiempos_espera'][pid]))
+            table.append([pid, self.estadisticas['tiempos_retorno'][pid], self.estadisticas['tiempos_espera'][pid]])
+        
+        if TABULATE_AVAILABLE:
+            print(tabulate(table, headers=headers, tablefmt="grid"))
+        else:
+            print(self._crear_tabla_manual(headers, table))
 
+        # Métricas generales
         if num_terminados == 0:
             reporte = {
                 "Tiempo promedio de retorno": 0,
@@ -137,7 +230,15 @@ class Simulador:
                 "Rendimiento": rendimiento
             }
         
-        print("\n--- Métricas Generales ---")
+        print("\n--- MÉTRICAS GENERALES ---")
+        headers = ["Métrica", "Valor"]
+        table = []
         for key, value in reporte.items():
-            print(f"{key}: {value:.2f}")
+            table.append([key, f"{value:.2f}"])
+        
+        if TABULATE_AVAILABLE:
+            print(tabulate(table, headers=headers, tablefmt="grid"))
+        else:
+            print(self._crear_tabla_manual(headers, table))
+
         return reporte

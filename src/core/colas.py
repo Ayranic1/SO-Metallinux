@@ -19,6 +19,7 @@ class GestorColas:
             self.nuevos.remove(proceso)
             proceso.estado = "Listo"
             self.listos.append(proceso)
+            # Ordenar por tiempo restante (SRTF)
             self.listos.sort(key=lambda p: p.tiempo_restante)
         except ValueError:
             print(f"ERROR: El proceso {proceso.id} no se encontró en la cola de nuevos.")
@@ -28,6 +29,16 @@ class GestorColas:
             self.suspendidos.remove(proceso)
             proceso.estado = "Listo"
             self.listos.append(proceso)
+            # Ordenar por tiempo restante (SRTF)
             self.listos.sort(key=lambda p: p.tiempo_restante)
         except ValueError:
             print(f"ERROR: El proceso {proceso.id} no se encontró en la cola de suspendidos.")
+            
+    def mover_nuevo_a_suspendido(self, proceso: Proceso):
+        # Mueve un proceso de la cola de nuevos a la cola de listos y suspendidos, si no cabe en memoria.
+        try:
+            self.nuevos.remove(proceso)
+            proceso.estado = "Listo y Suspendido"
+            self.suspendidos.append(proceso)
+        except ValueError:
+            print(f"ERROR: El proceso {proceso.id} no se encontró en la cola de nuevos.")
