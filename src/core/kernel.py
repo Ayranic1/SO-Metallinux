@@ -53,13 +53,14 @@ class Kernel:
         for proceso in self.procesos_maestros:
             if proceso.tiempo_arribo == tiempo_actual:
                 print(f"Llega el proceso {proceso.id} (Tamaño: {proceso.tamaño}K, Irrupción: {proceso.tiempo_irrupcion})")
-                # Los procesos que llegan pasan a Nuevos, donde esperan la admisión al DOM.
+                # Los procesos que llegan pasan a Nuevos, donde esperan la asignacion de memoria.
                 self.gestor_colas.agregar_nuevo(proceso)
+                self.procesos_maestros.remove(proceso)
 
     def _intentar_asignar_memoria(self):
         
         # Prioridad 1: Procesos Listos y Suspendidos
-        # Se prioriza reanudar procesos que ya están en el DOM.
+        # Se prioriza reanudar procesos que ya están en memoria.
         for proceso in self.gestor_colas.suspendidos[:]:
             if self.gestor_memoria.asignar_memoria(proceso):
                 self.gestor_colas.mover_suspendido_a_listo(proceso)

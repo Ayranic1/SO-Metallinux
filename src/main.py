@@ -6,6 +6,39 @@ sys.path.append(os.path.dirname(__file__))
 from utils.archivo_reader import LectorArchivos
 from core.simulador import Simulador
 
+def seleccionar_archivo_csv():
+    # Muestra los archivos CSV disponibles en la carpeta data/ y pide al usuario que seleccione uno
+    # Determinar la ruta absoluta de la carpeta data/ 
+    data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
+    
+    # Listar solo archivos .csv en el directorio de datos
+    try:
+        archivos_csv = [f for f in os.listdir(data_dir) if f.endswith('.csv')]
+    except FileNotFoundError:
+        print(f"\nError: El directorio 'data' no se encontró en {data_dir}.")
+        return None, None
+    
+    if not archivos_csv:
+        print("\nError: No se encontraron archivos .csv en la carpeta 'data'.")
+        return None, None
+    
+    print("\n--- Archivos CSV disponibles en data/ ---")
+    for i, filename in enumerate(archivos_csv):
+        print(f"[{i + 1}]. {filename}")
+        
+    while True:
+        try:
+            opcion = input("Seleccione el número del archivo a cargar: ")
+            indice = int(opcion) - 1
+            if 0 <= indice < len(archivos_csv):
+                nombre_archivo = archivos_csv[indice]
+                ruta_completa = os.path.join(data_dir, nombre_archivo)
+                return ruta_completa, nombre_archivo
+            else:
+                print("Opción no válida. Intente de nuevo.")
+        except ValueError:
+            print("Entrada no válida. Por favor, ingrese un número.")
+
 def mostrar_menu():
     nombre_grupo = """
                     
@@ -28,18 +61,27 @@ def mostrar_menu():
     print("[4]. Salir")
 
 def main():
-    ruta_archivo = "data/procesos.csv"
     
-    print("Leyendo archivo de procesos...")
+    # 1. Seleccionar archivo CSV antes de mostrar el menú
+    ruta_archivo, nombre_archivo = seleccionar_archivo_csv()
+    
+    if not ruta_archivo:
+        # No hay archivos o error en la selección, salir.
+        return
+
+    print(f"\nCargando procesos desde: {nombre_archivo}...")
+    
+    # 2. Cargar Procesos
     procesos, errores = LectorArchivos.leer_procesos_desde_csv(ruta_archivo)
     
     LectorArchivos.mostrar_errores(errores)
     LectorArchivos.mostrar_procesos_cargados(procesos)
     
     if not procesos:
-        print("No se pueden cargar procesos debido a errores")
+        print("No se pueden cargar procesos debido a errores. Saliendo.")
         return
 
+    # 3. Mostrar menú y ejecutar simulación
     while True:
         mostrar_menu()
         opcion = input("Seleccione una opción: ")
