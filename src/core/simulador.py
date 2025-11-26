@@ -91,6 +91,44 @@ class Simulador:
         cpu_status = f"Proceso {proceso_en_cpu.id} (Restante: {proceso_en_cpu.tiempo_restante})" if proceso_en_cpu else "Ociosa"
         print(f"CPU: {cpu_status}")
 
+        # --- Colas de Procesos Detalladas ---
+
+        # 1. Cola de procesos nuevos
+        print("\n--- Cola de Nuevos ---")
+        if self.kernel.gestor_colas.nuevos:
+            headers_nuevos = ['ID', 'T. Arribo', 'T. Irrupción', 'Tamaño']
+            table_nuevos = [[p.id, p.tiempo_arribo, p.tiempo_irrupcion, p.tamaño] for p in self.kernel.gestor_colas.nuevos]
+            if TABULATE_AVAILABLE:
+                print(tabulate(table_nuevos, headers=headers_nuevos, tablefmt="grid"))
+            else:
+                print(self._crear_tabla_manual(headers_nuevos, table_nuevos))
+        else:
+            print("(Vacía)")
+
+        # 2. Cola de procesos listos
+        print("\n--- Cola de Listos ---")
+        if self.kernel.gestor_colas.listos:
+            headers_listos = ['ID', 'T. Restante', 'T. Irrupción', 'Tamaño']
+            table_listos = [[p.id, p.tiempo_restante, p.tiempo_irrupcion, p.tamaño] for p in self.kernel.gestor_colas.listos]
+            if TABULATE_AVAILABLE:
+                print(tabulate(table_listos, headers=headers_listos, tablefmt="grid"))
+            else:
+                print(self._crear_tabla_manual(headers_listos, table_listos))
+        else:
+            print("(Vacía)")
+
+        # 3. Cola de Listos y Suspendidos
+        print("\n--- Cola de Listos y Suspendidos ---")
+        if self.kernel.gestor_colas.suspendidos:
+            headers_suspendidos = ['ID', 'T. Arribo', 'T. Irrupción', 'Tamaño', 'T. Restante']
+            table_suspendidos = [[p.id, p.tiempo_arribo, p.tiempo_irrupcion, p.tamaño, p.tiempo_restante] for p in self.kernel.gestor_colas.suspendidos]
+            if TABULATE_AVAILABLE:
+                print(tabulate(table_suspendidos, headers=headers_suspendidos, tablefmt="grid"))
+            else:
+                print(self._crear_tabla_manual(headers_suspendidos, table_suspendidos))
+        else:
+            print("(Vacía)")
+        
         # Tabla de Particiones de Memoria
         print("\n--- Tabla de Particiones de Memoria ---")
         headers = ['ID Partición', 'Dirección Inicio', 'Tamaño', 'ID Proceso', 'Fragmentación Int.']
@@ -105,44 +143,6 @@ class Simulador:
         else:
             # Formato manual mejorado para tablas ASCII
             print(self._crear_tabla_manual(headers, table))
-
-        # --- Colas de Procesos Detalladas ---
-
-        # 1. Cola de procesos listos
-        print("\n--- Cola de Listos ---")
-        if self.kernel.gestor_colas.listos:
-            headers_listos = ['ID', 'T. Restante', 'T. Irrupción', 'Tamaño']
-            table_listos = [[p.id, p.tiempo_restante, p.tiempo_irrupcion, p.tamaño] for p in self.kernel.gestor_colas.listos]
-            if TABULATE_AVAILABLE:
-                print(tabulate(table_listos, headers=headers_listos, tablefmt="grid"))
-            else:
-                print(self._crear_tabla_manual(headers_listos, table_listos))
-        else:
-            print("(Vacía)")
-
-        # 2. Cola de Listos y Suspendidos
-        print("\n--- Cola de Listos y Suspendidos ---")
-        if self.kernel.gestor_colas.suspendidos:
-            headers_suspendidos = ['ID', 'T. Arribo', 'T. Irrupción', 'Tamaño', 'T. Restante']
-            table_suspendidos = [[p.id, p.tiempo_arribo, p.tiempo_irrupcion, p.tamaño, p.tiempo_restante] for p in self.kernel.gestor_colas.suspendidos]
-            if TABULATE_AVAILABLE:
-                print(tabulate(table_suspendidos, headers=headers_suspendidos, tablefmt="grid"))
-            else:
-                print(self._crear_tabla_manual(headers_suspendidos, table_suspendidos))
-        else:
-            print("(Vacía)")
-            
-        # 3. Cola de procesos nuevos
-        print("\n--- Cola de Nuevos ---")
-        if self.kernel.gestor_colas.nuevos:
-            headers_nuevos = ['ID', 'T. Arribo', 'T. Irrupción', 'Tamaño']
-            table_nuevos = [[p.id, p.tiempo_arribo, p.tiempo_irrupcion, p.tamaño] for p in self.kernel.gestor_colas.nuevos]
-            if TABULATE_AVAILABLE:
-                print(tabulate(table_nuevos, headers=headers_nuevos, tablefmt="grid"))
-            else:
-                print(self._crear_tabla_manual(headers_nuevos, table_nuevos))
-        else:
-            print("(Vacía)")
 
     def _crear_tabla_manual(self, headers, data):
         """Crea una tabla ASCII manualmente cuando tabulate no está disponible"""
@@ -236,7 +236,14 @@ class Simulador:
         headers = ["Métrica", "Valor"]
         table = []
         for key, value in reporte.items():
-            table.append([key, f"{value:.2f}"])
+            if "Tiempo" in key:
+                table.append([key, f"{value:.2f} UT"])
+            elif "Uso de CPU" in key:
+                table.append([key, f"{value:.2f}%"])
+            elif "Rendimiento" in key:
+                table.append([key, f"{value:.2f} proc/UT"])
+            else:
+                table.append([key, f"{value:.2f}"])
         
         if TABULATE_AVAILABLE:
             print(tabulate(table, headers=headers, tablefmt="grid"))
