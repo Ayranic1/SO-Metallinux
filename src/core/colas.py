@@ -42,3 +42,6 @@ class GestorColas:
             self.suspendidos.append(proceso)
         except ValueError:
             print(f"ERROR: El proceso {proceso.id} no se encontró en la cola de nuevos.")
+
+    def ordenar_listos_srtf(self):
+        self.listos.sort(key=lambda p: p.tiempo_restante)

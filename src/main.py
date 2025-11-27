@@ -88,19 +88,19 @@ def main():
 
         if opcion == '1':
             print("Iniciando simulación paso a paso...")
-            simulador = Simulador(procesos)
+            simulador = Simulador(procesos, verbose=True)
             simulador.run(step_by_step=True)
             simulador.generar_reporte_estadistico()
             break
         elif opcion == '2':
             print("Iniciando simulación completa...")
-            simulador = Simulador(procesos)
+            simulador = Simulador(procesos, verbose=False)
             simulador.run()
             simulador.generar_reporte_estadistico()
             break
         elif opcion == '3':
             print("Iniciando simulación y guardando informe en archivo...")
-            simulador = Simulador(procesos)
+            simulador = Simulador(procesos, verbose=False)
             simulador.run_to_file("informe_simulacion.txt")
             print("Informe guardado en 'informe_simulacion.txt'")
             break

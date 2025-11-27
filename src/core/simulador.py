@@ -1,4 +1,5 @@
 import sys
+import os
 from typing import List
 from .proceso import Proceso
 from .cpu import CPU
@@ -16,9 +17,10 @@ except ImportError:
     TABULATE_AVAILABLE = False
 
 class Simulador:
-    def __init__(self, procesos: List[Proceso]):
+    def __init__(self, procesos: List[Proceso], verbose: bool = True):
         self.reloj = 0
         self.procesos_maestros = procesos
+        self.verbose = verbose
         # Se guarda el total de procesos válidos cargados para la condición de finalización.
         self.total_procesos_cargados = len(procesos) 
 
@@ -33,7 +35,8 @@ class Simulador:
             self.procesos_maestros,
             gestor_memoria,
             planificador,
-            gestor_colas
+            gestor_colas,
+            self.verbose
         )
         
         # 3. Contenedor de estadísticas
@@ -44,30 +47,51 @@ class Simulador:
             'tiempo_final': 0,
         }
 
+    def _get_current_simulation_state(self):
+        # Captura el estado estructural (queues, CPU assignment, partitions) para detectar cambios.
+        return {
+            'cpu_id': self.kernel.planificador.cpu.get_proceso_actual().id if self.kernel.planificador.cpu.get_proceso_actual() else None,
+            'listos': tuple(sorted([p.id for p in self.kernel.gestor_colas.listos])),
+            'suspendidos': tuple(sorted([p.id for p in self.kernel.gestor_colas.suspendidos])),
+            'nuevos': tuple(sorted([p.id for p in self.kernel.gestor_colas.nuevos])),
+            'particiones': tuple(
+                (p.id, p.proceso_asignado.id if p.proceso_asignado else None) 
+                for p in self.kernel.gestor_memoria.particiones
+            )
+        }
+
     def run(self, step_by_step=False):
-        print("--- Iniciando Simulación ---")
+        if self.verbose:
+            print("--- Iniciando Simulación ---")
         
         while not self._simulacion_finalizada():
-            print(f"\n--- Ciclo {self.reloj} ---")
-
-            proceso_terminado = self.kernel.ciclo_de_trabajo(self.reloj)
+            # --- Execute Cycle (Kernel runs all event logic and returns messages) ---
+            proceso_terminado, eventos = self.kernel.ciclo_de_trabajo(self.reloj)
             
             if proceso_terminado:
                 self._registrar_estadisticas_finalizacion(proceso_terminado)
-            
-            self._imprimir_estado_ciclo()
 
+            # --- Decision to Print Detailed State (Tables) ---
+            # Imprimir si hay eventos o si es el primer ciclo.
+            is_significant_event = bool(eventos) or self.reloj == 0
+
+            if self.verbose and is_significant_event:
+                if step_by_step:
+                    os.system('cls' if os.name == 'nt' else 'clear')
+                self._imprimir_estado_ciclo(eventos)
+                
+                if step_by_step:
+                    input("Presione Enter para continuar...")
+            
             if not self.kernel.planificador.cpu.esta_libre():
                 self.estadisticas['uso_cpu'] += 1
 
-            if step_by_step:
-                input("Presione Enter para continuar...")
-
             self.reloj += 1
 
-        print(f"\n--- Simulación Finalizada en tiempo {self.reloj} ---")
+        if self.verbose:
+            print(f"\n--- Simulación Finalizada en tiempo {self.reloj} ---")
         self.estadisticas['tiempo_final'] = self.reloj
-
+        
     def run_to_file(self, filename):
         original_stdout = sys.stdout
         with open(filename, 'w') as f:
@@ -77,10 +101,8 @@ class Simulador:
         sys.stdout = original_stdout
 
     def _simulacion_finalizada(self) -> bool:
-        """
-        La simulación finaliza cuando el número de procesos en la cola de terminados
-        es igual al número total de procesos cargados al inicio.
-        """
+        # La simulación finaliza cuando el número de procesos en la cola de terminados
+        # es igual al número total de procesos cargados al inicio.
         num_terminados = len(self.kernel.gestor_colas.terminados)
         return self.total_procesos_cargados == num_terminados
 
@@ -90,17 +112,21 @@ class Simulador:
         
         self.estadisticas['tiempos_retorno'][proceso.id] = tiempo_retorno
         self.estadisticas['tiempos_espera'][proceso.id] = tiempo_espera
-        print(f"Proceso {proceso.id} terminado. Retorno: {tiempo_retorno}, Espera: {tiempo_espera}")
+        if self.verbose:
+            print(f"Proceso {proceso.id} terminado. Retorno: {tiempo_retorno}, Espera: {tiempo_espera}")
 
-    def _imprimir_estado_ciclo(self):
+    def _imprimir_estado_ciclo(self, eventos: List[str]):
+        print(f"\n--- Ciclo {self.reloj} ---")
+        
+        # Imprimir eventos del ciclo
+        for evento in eventos:
+            print(evento)
+            
         proceso_en_cpu = self.kernel.planificador.cpu.get_proceso_actual()
         cpu_status = f"Proceso {proceso_en_cpu.id} (Restante: {proceso_en_cpu.tiempo_restante})" if proceso_en_cpu else "Ociosa"
         
         # Obtener el DOM para mejor contexto
         current_dom = self.kernel._get_current_dom()
-        
-        print(f"CPU: {cpu_status}")
-        print(f"Grado de Multiprogramación (DOM): {current_dom} / 5") 
 
         # Tabla de Particiones de Memoria
         print("\n--- Tabla de Particiones de Memoria ---")

@@ -9,83 +9,94 @@ class Kernel:
         procesos_maestros: List[Proceso],
         gestor_memoria: GestorMemoria,
         planificador: Planificador,
-        gestor_colas: GestorColas
+        gestor_colas: GestorColas,
+        verbose: bool = True
     ):
         self.procesos_maestros = procesos_maestros
         self.gestor_memoria = gestor_memoria
         self.planificador = planificador
         self.gestor_colas = gestor_colas
+        self.verbose = verbose
+        self.planificador.set_verbose(verbose)
         
     def _get_current_dom(self) -> int:
         # Calcula el Grado de Multiprogramación(DOM): Listos + Listos y Suspendidos.
-        # El límite de 5 procesos activos es entre ambas colas, excluyendo Nuevos y Terminados.
         return len(self.gestor_colas.listos) + len(self.gestor_colas.suspendidos)
 
-    def ciclo_de_trabajo(self, tiempo_actual: int) -> Optional[Proceso]:
-        # 1. Manejar las llegadas de nuevos procesos (van a la cola de Nuevos)
-        self._manejar_llegadas(tiempo_actual)
+    def ciclo_de_trabajo(self, tiempo_actual: int) -> (Optional[Proceso], List[str]):
+        eventos = []
+        
+        # 1. Manejar llegadas
+        eventos.extend(self._manejar_llegadas(tiempo_actual))
 
-        # 2. Manejar la finalización del proceso en CPU (si aplica)
-        proceso_terminado = self.planificador.manejar_finalizacion()
+        # 2. Manejar finalización
+        proceso_terminado, evento_fin = self.planificador.manejar_finalizacion()
+        if evento_fin:
+            eventos.append(evento_fin)
+        
         if proceso_terminado:
-            self.gestor_memoria.liberar_memoria(proceso_terminado)
-            
-            # Intentar asignar memoria inmediatamente tras la liberación.
-            self._intentar_asignar_memoria() 
-            return proceso_terminado
+            eventos.extend(self.gestor_memoria.liberar_memoria(proceso_terminado))
+            eventos.extend(self._intentar_asignar_memoria())
+            return proceso_terminado, eventos
 
-        # 3. Intentar asignar memoria a procesos suspendidos/nuevos 
-        self._intentar_asignar_memoria()
+        # 3. Asignar memoria
+        eventos.extend(self._intentar_asignar_memoria())
 
-        # 4. Ejecutar el planificador/CPU
-        proceso_en_cpu = self.planificador.ejecutar()
-        if proceso_en_cpu:
-            print(f"Proceso en CPU: {proceso_en_cpu.id} (Restante: {proceso_en_cpu.tiempo_restante})")
-        else:
-            print("CPU Ociosa")
+        # 4. Ejecutar planificador
+        evento_ejecucion = self.planificador.ejecutar(tiempo_actual)
+        if evento_ejecucion:
+            eventos.append(evento_ejecucion)
 
-        # 5. Avanzar el tiempo (ejecutar ciclo de CPU)
+        # 5. Avanzar tiempo
         self.planificador.avanzar_tiempo()
         
-        return None
+        return None, eventos
 
-    def _manejar_llegadas(self, tiempo_actual: int):
+    def _manejar_llegadas(self, tiempo_actual: int) -> List[str]:
+        eventos = []
         for proceso in self.procesos_maestros:
             if proceso.tiempo_arribo == tiempo_actual:
-                print(f"Llega el proceso {proceso.id} (Tamaño: {proceso.tamaño}K, Irrupción: {proceso.tiempo_irrupcion})")
-                # Los procesos que llegan pasan a Nuevos, donde esperan la asignacion de memoria.
+                eventos.append(f"Llega el proceso {proceso.id} (Tamaño: {proceso.tamaño}K, Irrupción: {proceso.tiempo_irrupcion})")
                 self.gestor_colas.agregar_nuevo(proceso)
                 self.procesos_maestros.remove(proceso)
+        return eventos
 
-    def _intentar_asignar_memoria(self):
-        
-        # Prioridad 1: Procesos Listos y Suspendidos
-        # Se prioriza reanudar procesos que ya están en memoria.
+    def _intentar_asignar_memoria(self) -> List[str]:
+        eventos = []
+        # Prioridad 1: Procesos Suspendidos
         for proceso in self.gestor_colas.suspendidos[:]:
-            if self.gestor_memoria.asignar_memoria(proceso):
+            asignado, evento = self.gestor_memoria.asignar_memoria(proceso)
+            if asignado:
                 self.gestor_colas.mover_suspendido_a_listo(proceso)
-                print(f"Proceso {proceso.id} reanudado y movido a Listos. (DOM: {self._get_current_dom()})")
-                # Re-evaluar inmediatamente después de reanudar un proceso.
-                return self._intentar_asignar_memoria() 
+                eventos.append(f"Proceso {proceso.id} reanudado y movido a Listos. (DOM: {self._get_current_dom()})")
+                
+                # Verificar preempción inmediata
+                evento_preempcion = self.planificador.verificar_preempcion_inmediata()
+                if evento_preempcion:
+                    eventos.append(evento_preempcion)
+                
+                eventos.extend(self._intentar_asignar_memoria())
+                return eventos
         
         # Prioridad 2: Procesos Nuevos
         for proceso in self.gestor_colas.nuevos[:]:
-            
-            # Criterio 1: Verificar el Grado de Multiprogramación (DOM <= 5)
             if self._get_current_dom() >= 5:
-                print(f"Proceso {proceso.id} (Nuevo) espera: Grado de Multiprogramación ({self._get_current_dom()}) al límite (5).")
-                # Si el DOM está al límite, los nuevos deben esperar en la cola de nuevos.
+                eventos.append(f"Proceso {proceso.id} (Nuevo) espera: Grado de Multiprogramación ({self._get_current_dom()}) al límite (5).")
                 break 
 
-            # Criterio 2: Intentar asignar memoria (Best-Fit)
-            if self.gestor_memoria.asignar_memoria(proceso):
-                # Caso A: Cabe en la memoria. Va a Listos.
+            asignado, evento = self.gestor_memoria.asignar_memoria(proceso)
+            if asignado:
                 self.gestor_colas.mover_nuevo_a_listo(proceso)
-                print(f"Memoria asignada al proceso {proceso.id}. Movido a Listos. (DOM: {self._get_current_dom()})")
-                # Re-evaluar inmediatamente después de admitir un proceso.
-                return self._intentar_asignar_memoria()
+                eventos.append(f"Memoria asignada al proceso {proceso.id}. Movido a Listos. (DOM: {self._get_current_dom()})")
+
+                # Verificar preempción inmediata
+                evento_preempcion = self.planificador.verificar_preempcion_inmediata()
+                if evento_preempcion:
+                    eventos.append(evento_preempcion)
+
+                eventos.extend(self._intentar_asignar_memoria())
+                return eventos
             else:
-                # Caso B: No cabe en la memoria, pero DOM < 5. Debe ser admitido al DOM y pasar a Suspendidos.
                 self.gestor_colas.mover_nuevo_a_suspendido(proceso)
-                print(f"Proceso {proceso.id} no cabe en memoria. Movido a Listos y Suspendidos. (DOM: {self._get_current_dom()})")
-                # Al mover a suspendidos, se continúa revisando si otros procesos nuevos caben en alguna partición.
+                eventos.append(f"Proceso {proceso.id} no cabe en memoria. Movido a Listos y Suspendidos. (DOM: {self._get_current_dom()})")
+        return eventos

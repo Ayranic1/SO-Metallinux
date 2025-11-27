@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 from .proceso import Proceso
 from .particion import Particion
 
@@ -33,7 +33,7 @@ class GestorMemoria(ABC):
         pass
     
     # Utiliza encontrar_particion para tomar la decision y aplica los cambios en memoria
-    def asignar_memoria(self, proceso):
+    def asignar_memoria(self, proceso: Proceso) -> (bool, Optional[str]):
         if self.hay_libre():
             particion_id = self.encontrar_particion(proceso.tamaño)
             if particion_id is not False:
@@ -41,15 +41,17 @@ class GestorMemoria(ABC):
                     if particion.id == particion_id:
                         particion.proceso_asignado = proceso
                         particion.fragmentacion_interna = particion.tamaño - proceso.tamaño
-                        return True
-        return False
-    
+                        return True, f"Memoria asignada al proceso {proceso.id} en la partición {particion.id}"
+        return False, None
 
-    def liberar_memoria(self, proceso):
+    def liberar_memoria(self, proceso: Proceso) -> List[str]:
+        eventos = []
         for particion in self.particiones:
-            if (particion.proceso_asignado == proceso):
+            if particion.proceso_asignado == proceso:
                 particion.proceso_asignado = None
                 particion.fragmentacion_interna = 0
+                eventos.append(f"Memoria liberada por el proceso {proceso.id} de la partición {particion.id}")
+        return eventos
         
 
     def mostrar_estado_memoria(self):
@@ -96,54 +98,35 @@ class Planificador(ABC):
     def __init__(self, gestor_colas: 'GestorColas', cpu: CPU):
         self.gestor_colas = gestor_colas
         self.cpu = cpu 
-        self.tiempo_actual = 0
+
+    @abstractmethod
+    def set_verbose(self, verbose: bool):
+        pass
 
     @abstractmethod
     def seleccionar_proximo_proceso_listo(self) -> Optional[Proceso]:
         pass
 
-    def ejecutar(self) -> Optional[Proceso]:
-        if self._necesita_preempcion():
-            self._preemptar()
-        
-        if self.cpu.esta_libre():
-            proximo = self.seleccionar_proximo_proceso_listo()
-            if proximo:
-                self._asignar_cpu(proximo)
-        
-        return self.cpu.get_proceso_actual()
+    @abstractmethod
+    def ejecutar(self, tiempo_actual: int) -> Optional[str]:
+        pass
 
-    def manejar_llegadas(self, procesos_nuevos: list):
-        for proceso in procesos_nuevos:
-            if proceso.tiempo_arribo == self.tiempo_actual:
-                print(f"Tiempo {self.tiempo_actual}: Llega el proceso {proceso.id}")
-                self.gestor_colas.agregar_nuevo(proceso)
-
-    def manejar_finalizacion(self) -> Optional[Proceso]:
-        proceso_en_cpu = self.cpu.get_proceso_actual()
-        if proceso_en_cpu and proceso_en_cpu.tiempo_restante <= 0:
-            proceso_terminado = self.cpu.liberar() 
-            proceso_terminado.estado = "Terminado"
-            print(f"Tiempo {self.tiempo_actual}: Finaliza el proceso {proceso_terminado.id}")
-            self.gestor_colas.terminados.append(proceso_terminado) 
-            return proceso_terminado
-        return None
+    @abstractmethod
+    def manejar_finalizacion(self) -> (Optional[Proceso], Optional[str]):
+        pass
 
     def avanzar_tiempo(self):
-        self.tiempo_actual += 1
         self.cpu.ejecutar_ciclo()
 
     # Métodos que deben ser implementados por el planificador concreto (SRTF)
     @abstractmethod
-    def _necesita_preempcion(self) -> bool:
+    def _necesita_preempcion(self) -> (bool, Optional[str]):
         pass
 
     @abstractmethod
     def _preemptar(self):
         pass
 
-    # Métodos auxiliares que el planificador concreto usará
-    def _asignar_cpu(self, proceso: Proceso):
-        self.gestor_colas.listos.remove(proceso)
-        self.cpu.dispatch(proceso)
-        print(f"Tiempo {self.tiempo_actual}: Se asigna CPU al proceso {proceso.id}")
+    @abstractmethod
+    def verificar_preempcion_inmediata(self) -> Optional[str]:
+        pass
