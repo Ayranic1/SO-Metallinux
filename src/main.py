@@ -56,32 +56,24 @@ def mostrar_menu():
     print(f"{s:^5}Este simulador utiliza el algoritmo SRTF para la planificación de CPU y Best-Fit para la gestión de memoria.")
     print("\nOpciones:")
     print("[1]. Ejecutar simulación paso a paso")
-    print("[2]. Ejecutar simulación completa")
-    print("[3]. Guardar informe en archivo")
-    print("[4]. Salir")
+    print("[2]. Ejecutar simulación solo cambios")
+    print("[3]. Ejecutar simulación completa")
+    print("[4]. Guardar informe en archivo")
+    print("[5]. Salir")
 
 def main():
+    ruta_archivo = "data/procesos.csv"
     
-    # 1. Seleccionar archivo CSV antes de mostrar el menú
-    ruta_archivo, nombre_archivo = seleccionar_archivo_csv()
-    
-    if not ruta_archivo:
-        # No hay archivos o error en la selección, salir.
-        return
-
-    print(f"\nCargando procesos desde: {nombre_archivo}...")
-    
-    # 2. Cargar Procesos
+    print("Leyendo archivo de procesos...")
     procesos, errores = LectorArchivos.leer_procesos_desde_csv(ruta_archivo)
     
     LectorArchivos.mostrar_errores(errores)
     LectorArchivos.mostrar_procesos_cargados(procesos)
     
     if not procesos:
-        print("No se pueden cargar procesos debido a errores. Saliendo.")
+        print("No se pueden cargar procesos debido a errores")
         return
 
-    # 3. Mostrar menú y ejecutar simulación
     while True:
         mostrar_menu()
         opcion = input("Seleccione una opción: ")
@@ -93,18 +85,24 @@ def main():
             simulador.generar_reporte_estadistico()
             break
         elif opcion == '2':
+            print("Iniciando simulación ...")
+            simulador = Simulador(procesos)
+            simulador.run(solo_cambios=True)
+            simulador.generar_reporte_estadistico()
+            break
+        elif opcion == '3':
             print("Iniciando simulación completa...")
             simulador = Simulador(procesos)
             simulador.run()
             simulador.generar_reporte_estadistico()
             break
-        elif opcion == '3':
+        elif opcion == '4':
             print("Iniciando simulación y guardando informe en archivo...")
             simulador = Simulador(procesos)
             simulador.run_to_file("informe_simulacion.txt")
             print("Informe guardado en 'informe_simulacion.txt'")
             break
-        elif opcion == '4':
+        elif opcion == '5':
             print("Saliendo del simulador.")
             break
         else:

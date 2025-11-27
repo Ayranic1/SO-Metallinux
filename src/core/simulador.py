@@ -42,37 +42,95 @@ class Simulador:
             'tiempo_final': 0,
         }
 
-    def run(self, step_by_step=False):
+
+    def _obtener_id_proceso_cpu(self):
+        """
+            Devuelve el ID del proceso actual en CPU o None si está ociosa.
+        """
+        proceso = self.kernel.planificador.cpu.get_proceso_actual()
+        return proceso.id if proceso else None
+
+    def _obtener_estado_memoria(self):
+        """
+            Devuelve una lista de tuplas (id_particion, id_proceso_asignado).
+        """
+        
+        estado = []
+        for p in self.kernel.gestor_memoria.particiones:
+            proc_id = p.proceso_asignado.id if p.proceso_asignado else None
+            estado.append((p.id, proc_id))
+        return estado
+
+
+
+    def run(self, step_by_step=False, solo_cambios=False):
+        """
+            Args:
+                step_by_step (bool): Pausa la ejecución en cada impresión.
+                solo_cambios (bool): Si es True, solo imprime cuando cambia CPU o Memoria.
+        """
+
+        estado_cpu_anterior = None
+        estado_mem_anterior = []
+
+
+
+
         print("--- Iniciando Simulación ---")
         
         while not self._simulacion_finalizada():
-            print(f"\n--- Ciclo {self.reloj} ---")
+            
+
+            if solo_cambios:
+                estado_cpu_anterior = self._obtener_id_proceso_cpu()
+                estado_mem_anterior = self._obtener_estado_memoria()
+
+            
 
             proceso_terminado = self.kernel.ciclo_de_trabajo(self.reloj)
             
             if proceso_terminado:
                 self._registrar_estadisticas_finalizacion(proceso_terminado)
             
-            self._imprimir_estado_ciclo()
 
             if not self.kernel.planificador.cpu.esta_libre():
                 self.estadisticas['uso_cpu'] += 1
 
-            if step_by_step:
-                input("Presione Enter para continuar...")
+            imprimir_este_ciclo = True
+
+            if solo_cambios:
+                estado_cpu_actual = self._obtener_id_proceso_cpu()
+                estado_mem_actual = self._obtener_estado_memoria()
+                
+                cambio_cpu = estado_cpu_anterior != estado_cpu_actual
+                cambio_memoria = estado_mem_anterior != estado_mem_actual
+                
+                if not (cambio_cpu or cambio_memoria or proceso_terminado):
+                    imprimir_este_ciclo = False
+
+
+            if imprimir_este_ciclo:
+                print(f"\n--- Ciclo {self.reloj} ---")
+                self._imprimir_estado_ciclo()
+                
+                if step_by_step or solo_cambios:
+                    input("Presione Enter para continuar...")
 
             self.reloj += 1
 
         print(f"\n--- Simulación Finalizada en tiempo {self.reloj} ---")
         self.estadisticas['tiempo_final'] = self.reloj
 
-    def run_to_file(self, filename):
+
+
+    def run_to_file(self, filename, solo_cambios=False):
         original_stdout = sys.stdout
         with open(filename, 'w') as f:
             sys.stdout = f
-            self.run()
+            self.run(solo_cambios=solo_cambios)
             self.generar_reporte_estadistico()
         sys.stdout = original_stdout
+
 
     def _simulacion_finalizada(self) -> bool:
         num_terminados = len(self.kernel.gestor_colas.terminados)
@@ -84,6 +142,7 @@ class Simulador:
         
         self.estadisticas['tiempos_retorno'][proceso.id] = tiempo_retorno
         self.estadisticas['tiempos_espera'][proceso.id] = tiempo_espera
+        
         print(f"Proceso {proceso.id} terminado. Retorno: {tiempo_retorno}, Espera: {tiempo_espera}")
 
     def _imprimir_estado_ciclo(self):
