@@ -22,13 +22,11 @@ class Particion:
         gestorColas.terminados.append(self.proceso_asignado)
         self.proceso_asignado = None
     
-    # TO DO: Implementar método para obtener espacio disponible
     def espacio_disponible(self):
         # devuelve el espacio de la partición
         return self.tamaño - self.proceso_asignado.tamaño()
 
         
-    # TO DO: verifica si la partición está libre
     def esta_libre(self)->bool:
         return self.proceso_asignado is None
 

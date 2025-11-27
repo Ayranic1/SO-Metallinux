@@ -7,12 +7,9 @@ if TYPE_CHECKING:
     from .colas import GestorColas
 from .cpu import CPU
 
-# Clase base para arrancar, si necesitas agregar mas cosas hacelo
-
 class GestorMemoria(ABC):
     def __init__(self):
         self.particiones = []
-        # TO DO: Inicializar las particiones fijas según especificación:
         # - 100K para Sistema Operativo (no disponible para procesos)
         # - 250K para trabajos grandes
         # - 150K para trabajos medianos  
@@ -21,7 +18,6 @@ class GestorMemoria(ABC):
         self.inicializar_particiones()
     
     def inicializar_particiones(self):
-        # TO DO: Crear e inicializar la lista de particiones
         tams = [100, 250, 150, 50] # tamaños de particiones
         id=0
         ult_dir = 0
@@ -31,13 +27,11 @@ class GestorMemoria(ABC):
             ult_dir+= t
             id+=1
 
-    # TO DO: Implementar algoritmo (en este caso BEST-FIT) para asignación de memoria
     # Es solo el algoritmo puro 
     @abstractmethod
     def encontrar_particion(self, tamaño_proceso):
         pass
     
-    # TO DO: Implementar método para asignar proceso a memoria
     # Utiliza encontrar_particion para tomar la decision y aplica los cambios en memoria
     def asignar_memoria(self, proceso):
         if self.hay_libre():
@@ -50,19 +44,16 @@ class GestorMemoria(ABC):
                         return True
         return False
     
-    # TO DO: Implementar método para liberar memoria de un proceso
+
     def liberar_memoria(self, proceso):
         for particion in self.particiones:
             if (particion.proceso_asignado == proceso):
                 particion.proceso_asignado = None
                 particion.fragmentacion_interna = 0
         
-    
-    # TO DO: Implementar método para obtener estado de memoria
+
     def mostrar_estado_memoria(self):
-        """
-            Devuelve un diccionario con los estados de cada partición
-        """
+        # Devuelve un diccionario con los estados de cada partición
         estado_actual = []
     
         for particion in self.particiones:
@@ -85,7 +76,6 @@ class GestorMemoria(ABC):
             
         return estado_actual
     
-    # TO DO: Implementar método para verificar grado de multiprogramación
     def grado_multiprogramacion_actual(self):
         grado = 0
         for particion in self.particiones:

@@ -19,6 +19,8 @@ class Simulador:
     def __init__(self, procesos: List[Proceso]):
         self.reloj = 0
         self.procesos_maestros = procesos
+        # Se guarda el total de procesos válidos cargados para la condición de finalización.
+        self.total_procesos_cargados = len(procesos) 
 
         # 1. Crear todos los componentes del sistema
         cpu = CPU()
@@ -75,8 +77,12 @@ class Simulador:
         sys.stdout = original_stdout
 
     def _simulacion_finalizada(self) -> bool:
+        """
+        La simulación finaliza cuando el número de procesos en la cola de terminados
+        es igual al número total de procesos cargados al inicio.
+        """
         num_terminados = len(self.kernel.gestor_colas.terminados)
-        return len(self.procesos_maestros) == num_terminados
+        return self.total_procesos_cargados == num_terminados
 
     def _registrar_estadisticas_finalizacion(self, proceso: Proceso):
         tiempo_retorno = self.reloj - proceso.tiempo_arribo
@@ -89,7 +95,12 @@ class Simulador:
     def _imprimir_estado_ciclo(self):
         proceso_en_cpu = self.kernel.planificador.cpu.get_proceso_actual()
         cpu_status = f"Proceso {proceso_en_cpu.id} (Restante: {proceso_en_cpu.tiempo_restante})" if proceso_en_cpu else "Ociosa"
+        
+        # Obtener el DOM para mejor contexto
+        current_dom = self.kernel._get_current_dom()
+        
         print(f"CPU: {cpu_status}")
+        print(f"Grado de Multiprogramación (DOM): {current_dom} / 5") 
 
         # Tabla de Particiones de Memoria
         print("\n--- Tabla de Particiones de Memoria ---")
@@ -109,7 +120,7 @@ class Simulador:
         # --- Colas de Procesos Detalladas ---
 
         # 1. Cola de procesos listos
-        print("\n--- Cola de Listos ---")
+        print("\n--- Cola de Listos (Asignados / Orden SRTF) ---")
         if self.kernel.gestor_colas.listos:
             headers_listos = ['ID', 'T. Restante', 'T. Irrupción', 'Tamaño']
             table_listos = [[p.id, p.tiempo_restante, p.tiempo_irrupcion, p.tamaño] for p in self.kernel.gestor_colas.listos]
@@ -121,7 +132,7 @@ class Simulador:
             print("(Vacía)")
 
         # 2. Cola de Listos y Suspendidos
-        print("\n--- Cola de Listos y Suspendidos ---")
+        print("\n--- Cola de Listos y Suspendidos (Admitidos / Sin Memoria) ---")
         if self.kernel.gestor_colas.suspendidos:
             headers_suspendidos = ['ID', 'T. Arribo', 'T. Irrupción', 'Tamaño', 'T. Restante']
             table_suspendidos = [[p.id, p.tiempo_arribo, p.tiempo_irrupcion, p.tamaño, p.tiempo_restante] for p in self.kernel.gestor_colas.suspendidos]
@@ -133,7 +144,7 @@ class Simulador:
             print("(Vacía)")
             
         # 3. Cola de procesos nuevos
-        print("\n--- Cola de Nuevos ---")
+        print("\n--- Cola de Nuevos (Esperando Admisión al DOM) ---")
         if self.kernel.gestor_colas.nuevos:
             headers_nuevos = ['ID', 'T. Arribo', 'T. Irrupción', 'Tamaño']
             table_nuevos = [[p.id, p.tiempo_arribo, p.tiempo_irrupcion, p.tamaño] for p in self.kernel.gestor_colas.nuevos]
