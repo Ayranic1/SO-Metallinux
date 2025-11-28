@@ -49,7 +49,7 @@ class PlanificadorSRTF(Planificador):
             if proximo_proceso:
                 self.cpu.dispatch(proximo_proceso)
                 self.gestor_colas.listos.remove(proximo_proceso)
-                return f"Tiempo {tiempo_actual}: Se asigna CPU al proceso {proximo_proceso.id} (Restante: {proximo_proceso.tiempo_restante})"
+                return f"Se asigna CPU al proceso {proximo_proceso.id} (Restante: {proximo_proceso.tiempo_restante})"
         
         return None
 

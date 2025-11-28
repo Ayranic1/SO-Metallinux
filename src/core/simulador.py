@@ -73,7 +73,9 @@ class Simulador:
             print("--- Iniciando Simulación ---")
         
         while not self._simulacion_finalizada():
-            proceso_terminado, eventos = self.kernel.ciclo_de_trabajo(self.reloj)
+            eventos_llegada = self.kernel._manejar_llegadas(self.reloj)
+            proceso_terminado, otros_eventos = self.kernel.ciclo_de_trabajo(self.reloj)
+            eventos = eventos_llegada + otros_eventos
             
             if proceso_terminado:
                 self._registrar_estadisticas_finalizacion(proceso_terminado)
@@ -134,21 +136,18 @@ class Simulador:
         # Muestra el grado de multiprogramación actual
         current_dom = self.kernel._get_current_dom()
 
-        # Muestra el estado de las particiones de memoria
-        print("\n--- Tabla de Particiones de Memoria ---")
-        headers = ['ID Partición', 'Dirección Inicio', 'Tamaño', 'ID Proceso', 'Fragmentación Int.']
-        table = []
-        for p in self.kernel.gestor_memoria.particiones:
-            id_proceso = p.proceso_asignado.id if p.proceso_asignado else 'Libre'
-            frag_interna = p.fragmentacion_interna if p.fragmentacion_interna is not None else 0
-            table.append([p.id, p.direccion_inicio, p.tamaño, id_proceso, frag_interna])
-        
-        if TABULATE_AVAILABLE:
-            print(tabulate(table, headers=headers, tablefmt="grid"))
-        else:
-            print(self._crear_tabla_manual(headers, table))
-
         # Muestra el estado de las colas de procesos
+        print("\n--- Cola de Nuevos (Esperando Admisión al DOM) ---")
+        if self.kernel.gestor_colas.nuevos:
+            headers_nuevos = ['ID', 'T. Arribo', 'T. Irrupción', 'Tamaño']
+            table_nuevos = [[p.id, p.tiempo_arribo, p.tiempo_irrupcion, p.tamaño] for p in self.kernel.gestor_colas.nuevos]
+            if TABULATE_AVAILABLE:
+                print(tabulate(table_nuevos, headers=headers_nuevos, tablefmt="grid"))
+            else:
+                print(self._crear_tabla_manual(headers_nuevos, table_nuevos))
+        else:
+            print("(Vacía)")
+
         print("\n--- Cola de Listos (Asignados / Orden SRTF) ---")
         if self.kernel.gestor_colas.listos:
             headers_listos = ['ID', 'T. Restante', 'T. Irrupción', 'Tamaño']
@@ -171,16 +170,19 @@ class Simulador:
         else:
             print("(Vacía)")
             
-        print("\n--- Cola de Nuevos (Esperando Admisión al DOM) ---")
-        if self.kernel.gestor_colas.nuevos:
-            headers_nuevos = ['ID', 'T. Arribo', 'T. Irrupción', 'Tamaño']
-            table_nuevos = [[p.id, p.tiempo_arribo, p.tiempo_irrupcion, p.tamaño] for p in self.kernel.gestor_colas.nuevos]
-            if TABULATE_AVAILABLE:
-                print(tabulate(table_nuevos, headers=headers_nuevos, tablefmt="grid"))
-            else:
-                print(self._crear_tabla_manual(headers_nuevos, table_nuevos))
+        # Muestra el estado de las particiones de memoria
+        print("\n--- Tabla de Particiones de Memoria ---")
+        headers = ['ID Partición', 'Dirección Inicio', 'Tamaño', 'ID Proceso', 'Fragmentación Int.']
+        table = []
+        for p in self.kernel.gestor_memoria.particiones:
+            id_proceso = p.proceso_asignado.id if p.proceso_asignado else 'Libre'
+            frag_interna = p.fragmentacion_interna if p.fragmentacion_interna is not None else 0
+            table.append([p.id, p.direccion_inicio, p.tamaño, id_proceso, frag_interna])
+        
+        if TABULATE_AVAILABLE:
+            print(tabulate(table, headers=headers, tablefmt="grid"))
         else:
-            print("(Vacía)")
+            print(self._crear_tabla_manual(headers, table))
 
     def _crear_tabla_manual(self, headers, data):
         """Crea una tabla ASCII manualmente cuando tabulate no está disponible"""

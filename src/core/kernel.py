@@ -34,10 +34,7 @@ class Kernel:
         """
         eventos = []
         
-        # 1. Gestionar la llegada de nuevos procesos al sistema.
-        eventos.extend(self._manejar_llegadas(tiempo_actual))
-
-        # 2. Gestionar la finalización de procesos que estaban en la CPU.
+        # 1. Gestionar la finalización de procesos que estaban en la CPU.
         proceso_terminado, evento_fin = self.planificador.manejar_finalizacion()
         if evento_fin:
             eventos.append(evento_fin)
@@ -55,15 +52,15 @@ class Kernel:
 
             return proceso_terminado, eventos
 
-        # 3. Intentar asignar memoria si no hubo finalizaciones.
+        # 2. Intentar asignar memoria si no hubo finalizaciones.
         eventos.extend(self._intentar_asignar_memoria())
 
-        # 4. Ejecutar el planificador para despachar un proceso si la CPU está libre.
+        # 3. Ejecutar el planificador para despachar un proceso si la CPU está libre.
         evento_ejecucion = self.planificador.ejecutar(tiempo_actual)
         if evento_ejecucion:
             eventos.append(evento_ejecucion)
 
-        # 5. Avanzar el reloj de la CPU.
+        # 4. Avanzar el reloj de la CPU.
         self.planificador.avanzar_tiempo()
         
         return None, eventos
