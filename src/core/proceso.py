@@ -1,4 +1,8 @@
 class Proceso:
+    """
+    Representa un proceso en el sistema. Contiene toda la información
+    relevante para la simulación, como su tamaño, tiempos y estado.
+    """
     def __init__(self, id: str, tamaño: int, tiempo_arribo: int, tiempo_irrupcion: int):
         self.id = id
         self.tamaño = tamaño

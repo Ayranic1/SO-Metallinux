@@ -17,20 +17,23 @@ except ImportError:
     TABULATE_AVAILABLE = False
 
 class Simulador:
+    """
+    Orquesta la simulación completa, gestionando el reloj, los componentes del sistema
+    y la recolección de estadísticas.
+    """
     def __init__(self, procesos: List[Proceso], verbose: bool = True):
         self.reloj = 0
         self.procesos_maestros = procesos
         self.verbose = verbose
-        # Se guarda el total de procesos válidos cargados para la condición de finalización.
-        self.total_procesos_cargados = len(procesos) 
+        self.total_procesos_cargados = len(procesos)
 
-        # 1. Crear todos los componentes del sistema
+        # Componentes del sistema
         cpu = CPU()
         gestor_colas = GestorColas()
         gestor_memoria = GestorMemoriaBestFit()
         planificador = PlanificadorSRTF(gestor_colas, cpu)
         
-        # 2. Inyectar dependencias en el Kernel
+        # El kernel centraliza la lógica de control del sistema
         self.kernel = Kernel(
             self.procesos_maestros,
             gestor_memoria,
@@ -39,8 +42,10 @@ class Simulador:
             self.verbose
         )
         
-        # 3. Contenedor de estadísticas
+        # Diccionario para almacenar las métricas de la simulación
         self.estadisticas = {
+            'tiempos_arribo': {},
+            'tiempos_finalizacion': {},
             'tiempos_retorno': {},
             'tiempos_espera': {},
             'uso_cpu': 0,
@@ -48,7 +53,7 @@ class Simulador:
         }
 
     def _get_current_simulation_state(self):
-        # Captura el estado estructural (queues, CPU assignment, partitions) para detectar cambios.
+        # Captura el estado para detectar cambios estructurales en el sistema
         return {
             'cpu_id': self.kernel.planificador.cpu.get_proceso_actual().id if self.kernel.planificador.cpu.get_proceso_actual() else None,
             'listos': tuple(sorted([p.id for p in self.kernel.gestor_colas.listos])),
@@ -61,27 +66,28 @@ class Simulador:
         }
 
     def run(self, step_by_step=False):
+        """
+        Ejecuta el bucle principal de la simulación hasta que todos los procesos hayan terminado.
+        """
         if self.verbose:
             print("--- Iniciando Simulación ---")
         
         while not self._simulacion_finalizada():
-            # --- Execute Cycle (Kernel runs all event logic and returns messages) ---
             proceso_terminado, eventos = self.kernel.ciclo_de_trabajo(self.reloj)
             
             if proceso_terminado:
                 self._registrar_estadisticas_finalizacion(proceso_terminado)
 
-            # --- Decision to Print Detailed State (Tables) ---
-            # Imprimir si hay eventos o si es el primer ciclo.
             is_significant_event = bool(eventos) or self.reloj == 0
 
-            if self.verbose and is_significant_event:
+            if is_significant_event:
                 if step_by_step:
-                    os.system('cls' if os.name == 'nt' else 'clear')
-                self._imprimir_estado_ciclo(eventos)
-                
-                if step_by_step:
+                    if self.verbose:
+                        os.system('cls' if os.name == 'nt' else 'clear')
+                    self._imprimir_estado_ciclo(eventos)
                     input("Presione Enter para continuar...")
+                else:
+                    self._imprimir_estado_ciclo(eventos)
             
             if not self.kernel.planificador.cpu.esta_libre():
                 self.estadisticas['uso_cpu'] += 1
@@ -101,8 +107,7 @@ class Simulador:
         sys.stdout = original_stdout
 
     def _simulacion_finalizada(self) -> bool:
-        # La simulación finaliza cuando el número de procesos en la cola de terminados
-        # es igual al número total de procesos cargados al inicio.
+        # La simulación termina cuando todos los procesos iniciales han sido completados.
         num_terminados = len(self.kernel.gestor_colas.terminados)
         return self.total_procesos_cargados == num_terminados
 
@@ -110,6 +115,8 @@ class Simulador:
         tiempo_retorno = self.reloj - proceso.tiempo_arribo
         tiempo_espera = tiempo_retorno - proceso.tiempo_irrupcion
         
+        self.estadisticas['tiempos_arribo'][proceso.id] = proceso.tiempo_arribo
+        self.estadisticas['tiempos_finalizacion'][proceso.id] = self.reloj
         self.estadisticas['tiempos_retorno'][proceso.id] = tiempo_retorno
         self.estadisticas['tiempos_espera'][proceso.id] = tiempo_espera
         if self.verbose:
@@ -118,17 +125,16 @@ class Simulador:
     def _imprimir_estado_ciclo(self, eventos: List[str]):
         print(f"\n--- Ciclo {self.reloj} ---")
         
-        # Imprimir eventos del ciclo
+        # Imprime los eventos ocurridos en el ciclo
         for evento in eventos:
             print(evento)
             
         proceso_en_cpu = self.kernel.planificador.cpu.get_proceso_actual()
-        cpu_status = f"Proceso {proceso_en_cpu.id} (Restante: {proceso_en_cpu.tiempo_restante})" if proceso_en_cpu else "Ociosa"
         
-        # Obtener el DOM para mejor contexto
+        # Muestra el grado de multiprogramación actual
         current_dom = self.kernel._get_current_dom()
 
-        # Tabla de Particiones de Memoria
+        # Muestra el estado de las particiones de memoria
         print("\n--- Tabla de Particiones de Memoria ---")
         headers = ['ID Partición', 'Dirección Inicio', 'Tamaño', 'ID Proceso', 'Fragmentación Int.']
         table = []
@@ -140,12 +146,9 @@ class Simulador:
         if TABULATE_AVAILABLE:
             print(tabulate(table, headers=headers, tablefmt="grid"))
         else:
-            # Formato manual mejorado para tablas ASCII
             print(self._crear_tabla_manual(headers, table))
 
-        # --- Colas de Procesos Detalladas ---
-
-        # 1. Cola de procesos listos
+        # Muestra el estado de las colas de procesos
         print("\n--- Cola de Listos (Asignados / Orden SRTF) ---")
         if self.kernel.gestor_colas.listos:
             headers_listos = ['ID', 'T. Restante', 'T. Irrupción', 'Tamaño']
@@ -157,7 +160,6 @@ class Simulador:
         else:
             print("(Vacía)")
 
-        # 2. Cola de Listos y Suspendidos
         print("\n--- Cola de Listos y Suspendidos (Admitidos / Sin Memoria) ---")
         if self.kernel.gestor_colas.suspendidos:
             headers_suspendidos = ['ID', 'T. Arribo', 'T. Irrupción', 'Tamaño', 'T. Restante']
@@ -169,7 +171,6 @@ class Simulador:
         else:
             print("(Vacía)")
             
-        # 3. Cola de procesos nuevos
         print("\n--- Cola de Nuevos (Esperando Admisión al DOM) ---")
         if self.kernel.gestor_colas.nuevos:
             headers_nuevos = ['ID', 'T. Arribo', 'T. Irrupción', 'Tamaño']
@@ -183,97 +184,76 @@ class Simulador:
 
     def _crear_tabla_manual(self, headers, data):
         """Crea una tabla ASCII manualmente cuando tabulate no está disponible"""
-        # Calcular anchos de columnas
-        col_widths = []
-        for i, header in enumerate(headers):
-            max_width = len(str(header))
-            for row in data:
-                max_width = max(max_width, len(str(row[i])))
-            col_widths.append(max_width + 2)  # +2 para padding
-        
-        # Crear línea separadora
-        separator = "┌"
-        for width in col_widths:
-            separator += "─" * width + "┬"
-        separator = separator[:-1] + "┐"
-        
-        # Crear línea de headers
-        header_line = "│"
-        for i, header in enumerate(headers):
-            header_line += f" {header:<{col_widths[i]-2}} │"
-        
-        # Crear línea media
-        middle_sep = "├"
-        for width in col_widths:
-            middle_sep += "─" * width + "┼"
-        middle_sep = middle_sep[:-1] + "┤"
-        
-        # Crear líneas de datos
-        data_lines = []
+        col_widths = [len(str(h)) for h in headers]
         for row in data:
-            data_line = "│"
             for i, cell in enumerate(row):
-                data_line += f" {str(cell):<{col_widths[i]-2}} │"
-            data_lines.append(data_line)
+                col_widths[i] = max(col_widths[i], len(str(cell)))
         
-        # Crear línea final
-        bottom_sep = "└"
-        for width in col_widths:
-            bottom_sep += "─" * width + "┴"
-        bottom_sep = bottom_sep[:-1] + "┘"
+        header_line = " | ".join(f"{h:<{col_widths[i]}}" for i, h in enumerate(headers))
+        separator = "-+-".join("-" * w for w in col_widths)
         
-        # Construir tabla completa
-        table_str = separator + "\n" + header_line + "\n" + middle_sep + "\n"
-        table_str += "\n".join(data_lines) + "\n" + bottom_sep
-        
-        return table_str
+        lines = [header_line, separator]
+        for row in data:
+            lines.append(" | ".join(f"{str(c):<{col_widths[i]}}" for i, c in enumerate(row)))
+        return "\n".join(lines)
 
     def generar_reporte_estadistico(self) -> dict:
+        """
+        Calcula y muestra las métricas finales de la simulación.
+        """
         print("\n" + "="*50)
         print("REPORTE ESTADÍSTICO FINAL")
         print("="*50)
 
         num_terminados = len(self.estadisticas['tiempos_retorno'])
 
-        # Tabla de tiempos por proceso
+        # Muestra una tabla con los tiempos consolidados por proceso
         print("\n--- TIEMPOS POR PROCESO ---")
-        headers = ['Proceso', 'T. Retorno', 'T. Espera']
+        headers = ['Proceso', 'T. Arribo', 'T. Finalización', 'T. Retorno', 'T. Espera']
         table = []
-        for pid in self.estadisticas['tiempos_retorno']:
-            table.append([pid, self.estadisticas['tiempos_retorno'][pid], self.estadisticas['tiempos_espera'][pid]])
+        for pid in sorted(self.estadisticas['tiempos_retorno'].keys()):
+            table.append([
+                pid,
+                self.estadisticas['tiempos_arribo'][pid],
+                self.estadisticas['tiempos_finalizacion'][pid],
+                self.estadisticas['tiempos_retorno'][pid],
+                self.estadisticas['tiempos_espera'][pid]
+            ])
         
         if TABULATE_AVAILABLE:
             print(tabulate(table, headers=headers, tablefmt="grid"))
         else:
             print(self._crear_tabla_manual(headers, table))
 
-        # Métricas generales
+        # Muestra las métricas generales del sistema
         if num_terminados == 0:
             reporte = {
-                "Tiempo promedio de retorno": 0,
-                "Tiempo promedio de espera": 0,
-                "Uso de CPU (%)": 0,
-                "Rendimiento": 0
+                "Tiempo promedio de retorno (u.t)": 0,
+                "Tiempo promedio de espera (u.t)": 0,
+                "Rendimiento (procesos/u.t)": 0,
+                "Tiempo de simulación total (u.t)": self.estadisticas['tiempo_final']
             }
         else:
             total_retorno = sum(self.estadisticas['tiempos_retorno'].values())
             total_espera = sum(self.estadisticas['tiempos_espera'].values())
             tiempo_final = self.estadisticas['tiempo_final']
-            uso_cpu_porcentaje = (self.estadisticas['uso_cpu'] / tiempo_final) * 100 if tiempo_final > 0 else 0
             rendimiento = num_terminados / tiempo_final if tiempo_final > 0 else 0
             
             reporte = {
-                "Tiempo promedio de retorno": total_retorno / num_terminados,
-                "Tiempo promedio de espera": total_espera / num_terminados,
-                "Uso de CPU (%)": uso_cpu_porcentaje,
-                "Rendimiento": rendimiento
+                "Tiempo promedio de retorno (u.t)": total_retorno / num_terminados,
+                "Tiempo promedio de espera (u.t)": total_espera / num_terminados,
+                "Rendimiento (procesos/u.t)": rendimiento,
+                "Tiempo de simulación total (u.t)": tiempo_final
             }
         
         print("\n--- MÉTRICAS GENERALES ---")
         headers = ["Métrica", "Valor"]
         table = []
         for key, value in reporte.items():
-            table.append([key, f"{value:.2f}"])
+            if key == "Tiempo de simulación total (u.t)":
+                 table.append([key, f"{value}"])
+            else:
+                table.append([key, f"{value:.2f}"])
         
         if TABULATE_AVAILABLE:
             print(tabulate(table, headers=headers, tablefmt="grid"))
