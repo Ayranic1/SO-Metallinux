@@ -18,9 +18,18 @@ class GestorMemoria(ABC):
         self.inicializar_particiones()
     
     def inicializar_particiones(self):
-        tams = [100, 250, 150, 50] # tamaños de particiones
+        tams = [250, 150, 50] # tamaños de particiones
         id=0
         ult_dir = 0
+
+        # partición e asignación del SO
+        t=100
+        particion = Particion(str(id),ult_dir, t)
+        particion.proceso_asignado = Proceso('SO', t, 0, 0)
+        self.particiones.append(particion)
+        ult_dir+= t
+        id+=1
+        
         for t in tams:
             particion = Particion(str(id),ult_dir, t)
             self.particiones.append(particion)

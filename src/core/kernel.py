@@ -37,6 +37,12 @@ class Kernel:
         if proceso_terminado:
             eventos.extend(self.gestor_memoria.liberar_memoria(proceso_terminado))
             eventos.extend(self._intentar_asignar_memoria())
+            
+            # Intentar despachar un nuevo proceso inmediatamente
+            evento_ejecucion = self.planificador.ejecutar(tiempo_actual)
+            if evento_ejecucion:
+                eventos.append(evento_ejecucion)
+
             return proceso_terminado, eventos
 
         # 3. Asignar memoria
