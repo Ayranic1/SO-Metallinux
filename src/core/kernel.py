@@ -67,83 +67,62 @@ class Kernel:
 
     def _manejar_llegadas(self, tiempo_actual: int) -> List[str]:
         eventos = []
-        # Revisa la lista maestra de procesos para ver si alguno llega en el tiempo actual.
+        # Usar una lista temporal para los procesos que llegan para evitar problemas al modificar la lista maestra.
+        procesos_que_llegan = []
         for proceso in self.procesos_maestros:
             if proceso.tiempo_arribo == tiempo_actual:
-                eventos.append(f"Llega el proceso {proceso.id} (Tamaño: {proceso.tamaño}K, Irrupción: {proceso.tiempo_irrupcion})")
-                self.gestor_colas.agregar_nuevo(proceso)
-                self.procesos_maestros.remove(proceso)
+                procesos_que_llegan.append(proceso)
+
+        if not procesos_que_llegan:
+            return eventos
+
+        # Ordenar para un manejo determinista de llegadas simultáneas
+        procesos_que_llegan.sort(key=lambda p: p.id)
+
+        for proceso in procesos_que_llegan:
+            eventos.append(f"Llega el proceso {proceso.id} (Tamaño: {proceso.tamaño}K, Irrupción: {proceso.tiempo_irrupcion})")
+            self.gestor_colas.agregar_nuevo(proceso)
+            self.procesos_maestros.remove(proceso) # Esto es seguro porque no estamos iterando sobre procesos_maestros
+            
         return eventos
 
     def _intentar_asignar_memoria(self, particion_liberada: Optional[Particion] = None) -> List[str]:
         """
-        Intenta asignar memoria a procesos en espera, con una lógica de prioridades.
-        Si se especifica una partición, se le da prioridad para la asignación.
+        Intenta asignar memoria a procesos en espera, procesando a tantos como sea posible en un solo ciclo.
         """
         eventos = []
-        
-        if particion_liberada:
-            # Prioridad 1: Procesos en Listos y Suspendidos que quepan en la partición liberada.
-            for proceso in self.gestor_colas.suspendidos:
-                if self.gestor_memoria.proceso_cabe_en_particion(proceso, particion_liberada):
-                    asignado, evento = self.gestor_memoria.asignar_memoria(proceso)
-                    if asignado:
-                        self.gestor_colas.mover_suspendido_a_listo(proceso)
-                        eventos.append(f"Proceso {proceso.id} reanudado y movido a Listos. (DOM: {self._get_current_dom()})")
-                        
-                        if self._get_current_dom() < 5 and self.gestor_colas.nuevos:
-                            proceso_nuevo = self.gestor_colas.nuevos[0]
-                            self.gestor_colas.mover_nuevo_a_suspendido(proceso_nuevo)
-                            eventos.append(f"Proceso {proceso_nuevo.id} ingresa a Listos y Suspendidos. (DOM: {self._get_current_dom()})")
+        continuar_intentando = True
+        while continuar_intentando:
+            continuar_intentando = False
 
-                        evento_preempcion = self.planificador.verificar_preempcion_inmediata()
-                        if evento_preempcion:
-                            eventos.append(evento_preempcion)
-                        return eventos
+            # Prioridad 1: Procesos en Listos y Suspendidos
+            for proceso in self.gestor_colas.suspendidos[:]:
+                asignado, evento = self.gestor_memoria.asignar_memoria(proceso)
+                if asignado:
+                    self.gestor_colas.mover_suspendido_a_listo(proceso)
+                    eventos.append(f"Proceso {proceso.id} reanudado y movido a Listos. (DOM: {self._get_current_dom()})")
+                    continuar_intentando = True
+                    
+                    evento_preempcion = self.planificador.verificar_preempcion_inmediata()
+                    if evento_preempcion:
+                        eventos.append(evento_preempcion)
 
-            # Prioridad 2: Procesos Nuevos que quepan en la partición liberada.
-            if self._get_current_dom() < 5:
-                for proceso in self.gestor_colas.nuevos:
-                     if self.gestor_memoria.proceso_cabe_en_particion(proceso, particion_liberada):
-                        asignado, evento = self.gestor_memoria.asignar_memoria(proceso)
-                        if asignado:
-                            self.gestor_colas.mover_nuevo_a_listo(proceso)
-                            eventos.append(f"Memoria asignada al proceso {proceso.id}. Movido a Listos. (DOM: {self._get_current_dom()})")
-                            
-                            evento_preempcion = self.planificador.verificar_preempcion_inmediata()
-                            if evento_preempcion:
-                                eventos.append(evento_preempcion)
-                            return eventos
-            return eventos
+            # Prioridad 2: Procesos Nuevos, si el DOM lo permite
+            for proceso in self.gestor_colas.nuevos[:]:
+                if self._get_current_dom() >= 5:
+                    break
 
-        # Lógica general si no se liberó una partición específica.
-        # Intenta asignar memoria a procesos suspendidos o nuevos en cualquier partición disponible.
-        for proceso in self.gestor_colas.suspendidos[:]:
-            asignado, evento = self.gestor_memoria.asignar_memoria(proceso)
-            if asignado:
-                self.gestor_colas.mover_suspendido_a_listo(proceso)
-                eventos.append(f"Proceso {proceso.id} reanudado y movido a Listos. (DOM: {self._get_current_dom()})")
-                
-                evento_preempcion = self.planificador.verificar_preempcion_inmediata()
-                if evento_preempcion:
-                    eventos.append(evento_preempcion)
-                return eventos
-        
-        for proceso in self.gestor_colas.nuevos[:]:
-            if self._get_current_dom() >= 5:
-                break 
+                asignado, evento = self.gestor_memoria.asignar_memoria(proceso)
+                if asignado:
+                    self.gestor_colas.mover_nuevo_a_listo(proceso)
+                    eventos.append(f"Memoria asignada al proceso {proceso.id}. Movido a Listos. (DOM: {self._get_current_dom()})")
+                    continuar_intentando = True
 
-            asignado, evento = self.gestor_memoria.asignar_memoria(proceso)
-            if asignado:
-                self.gestor_colas.mover_nuevo_a_listo(proceso)
-                eventos.append(f"Memoria asignada al proceso {proceso.id}. Movido a Listos. (DOM: {self._get_current_dom()})")
-
-                evento_preempcion = self.planificador.verificar_preempcion_inmediata()
-                if evento_preempcion:
-                    eventos.append(evento_preempcion)
-                return eventos
-            else:
-                if self._get_current_dom() < 5:
+                    evento_preempcion = self.planificador.verificar_preempcion_inmediata()
+                    if evento_preempcion:
+                        eventos.append(evento_preempcion)
+                else:
                     self.gestor_colas.mover_nuevo_a_suspendido(proceso)
                     eventos.append(f"Proceso {proceso.id} no cabe en memoria. Movido a Listos y Suspendidos. (DOM: {self._get_current_dom()})")
+        
         return eventos

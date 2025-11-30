@@ -1,15 +1,23 @@
-import os
 import sys
+import os
 
-sys.path.append(os.path.dirname(__file__))
+# Agrega el directorio 'src' al sys.path para que los módulos se encuentren
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
+
 
 from utils.archivo_reader import LectorArchivos
 from core.simulador import Simulador
 
 def seleccionar_archivo_csv():
     # Muestra los archivos CSV disponibles en la carpeta data/ y pide al usuario que seleccione uno
-    # Determinar la ruta absoluta de la carpeta data/ 
-    data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
+    # Determinar la ruta de la carpeta data/ de forma robusta para PyInstaller
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        # Estamos en un ejecutable de PyInstaller
+        data_dir = os.path.join(sys._MEIPASS, 'data')
+    else:
+        # Estamos ejecutando como un script normal
+        data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
     
     # Listar solo archivos .csv en el directorio de datos
     try:

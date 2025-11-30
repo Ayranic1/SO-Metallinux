@@ -4,10 +4,7 @@ import sys
 from typing import List, Dict, Tuple
 from pathlib import Path
 
-raiz_proyecto = Path(__file__).parent.parent.parent
-sys.path.append(str(raiz_proyecto))
-
-from src.core.proceso import Proceso
+from core.proceso import Proceso
 
 class LectorArchivos: 
     MAX_PROCESOS = 10
